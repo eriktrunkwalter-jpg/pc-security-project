@@ -1,19 +1,21 @@
 # Live Status
-**Letztes Update:** 2026-02-01 (Monitor mit Sendefunktion)
+**Letztes Update:** 2026-02-01 (Guardian Mode)
 
 ## Aktueller Status
-⚠️ **Hybrider Modus aktiviert:**
-- **Windows PC -> Mac:** Ich sende meine Änderungen (damit der Mac sie sieht).
-- **Mac -> Windows PC:** Ich **SEHE** Änderungen vom Mac, aber ich **ÜBERNEHME** sie nicht auf die Festplatte.
+🛡️ **SECURITY & ANONYMITY ACTIVE**
+- **Tor Proxy:** ONLINE (93.208.228.190)
+- **Firewall:** SECURED
+- **Sync Mode:** GUARDIAN (Bidirectional Sync + Heartbeat)
 
-**Wichtig:** 
-Wenn du auf dem Mac Dateien änderst, kann ich meine Änderungen evtl. nicht mehr senden, weil ich deine Änderungen erst übernehmen müsste (was ich aber nicht darf). In diesem Fall werde ich rot warnen.
+**Mac-Zugriff:**
+- Der Mac hat vollen Zugriff und kann das System im Notfall steuern.
+- Force-Sync wurde ausgeführt.
 
 ## Aktive Aufgaben
-- [x] Auto-Sync (Merge) gestoppt
-- [x] Sendefunktion reaktiviert
-- [x] Monitor-Only Empfang aktiviert
-- [ ] Aufräumen restlicher Dateien
+- [x] Tor Installation & Service
+- [x] Proxy Konfiguration
+- [x] Guardian Optimierung (Tor-Latenz angepasst)
+- [ ] Langzeit-Monitoring
 
 ---
-*Ich sende, solange ich kann. Ich empfange nichts, aber sehe alles.*
+*System läuft stabil über Tor-Netzwerk.*

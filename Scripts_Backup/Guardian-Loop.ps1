@@ -165,5 +165,5 @@ while ($true) {
         # (Auskommentiert, damit wir nicht spammen, nur bei Bedarf aktivieren)
     }
 
-    Start-Sleep -Seconds 5
+    Start-Sleep -Seconds 10
 }
