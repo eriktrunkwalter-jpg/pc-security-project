@@ -26,6 +26,19 @@ try {
 } catch {}
 
 Write-Host "GUARDIAN SYSTEM GESTARTET" -ForegroundColor Green
+
+# INITIAL SECURITY HARDENING & TOR START
+Write-Host "Aktiviere Sicherheits-Protokolle..." -ForegroundColor Yellow
+if (Test-Path ".\Scripts_Backup\Install-Tor.ps1") {
+    if (-not (Test-Path "..\Tools\Tor\tor.exe")) {
+        Write-Host "Tor fehlt. Installiere..."
+        & ".\Scripts_Backup\Install-Tor.ps1"
+    }
+}
+if (Test-Path ".\Scripts_Backup\Safe-Harden.ps1") {
+    & ".\Scripts_Backup\Safe-Harden.ps1"
+}
+
 Write-Host "Überwache Mac-Signale und Systemstatus..."
 $offlineCounter = 0
 

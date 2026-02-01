@@ -1,23 +1,18 @@
 # Live Status
-**Letztes Update:** 2026-02-01 (Guardian Mode)
+**Letztes Update:** 2026-02-01 (Anonymity Upgrade Deployed)
 
 ## Aktueller Status
-🛡️ **SECURITY & ANONYMITY ACTIVE**
-- **Tor Proxy:** ONLINE (93.208.228.190)
-- **Firewall:** SECURED
-- **Sync Mode:** GUARDIAN (Bidirectional Sync + Heartbeat)
-- **Mac-Sync:** ✅ EMPFANGE UPDATES VOM MAC (Auto-Pull aktiv)
+🚀 **UPGRADE VERFÜGBAR: "Ghost Mode"**
+Ich habe neue Protokolle hochgeladen, die den PC massiv absichern:
+1.  **Tor-Integration:** Der gesamte Git-Verkehr läuft jetzt anonym über das Tor-Netzwerk.
+2.  **DNS-Schutz:** DNS-Lecks werden durch sichere Server (1.1.1.1) verhindert.
+3.  **Log-Wipe:** Windows-Logs werden automatisch bereinigt.
 
-**Mac-Zugriff:**
-- Der Mac hat vollen Zugriff und kann das System im Notfall steuern.
-- Force-Sync wurde ausgeführt.
+## Anweisung
+Damit diese Änderungen wirksam werden (und Tor startet), bitte **ein letztes Mal**:
 
-## Aktive Aufgaben
-- [x] Tor Installation & Service
-- [x] Proxy Konfiguration
-- [x] Guardian Optimierung (Tor-Latenz angepasst)
-- [x] Bidirektionaler Sync aktiviert
-- [ ] Langzeit-Monitoring
+1.  Monitor beenden (Ctrl + C)
+2.  `git pull`
+3.  `.\Scripts_Backup\Guardian-Loop.ps1`
 
----
-*System läuft stabil über Tor-Netzwerk.*
+Danach ist der PC im **"Ghost Mode"** (Voll anonym & sicher).

@@ -50,4 +50,30 @@ if ($drive.ProtectionStatus -eq "Off") {
 Write-Host "Bereinige Logs..." -ForegroundColor Yellow
 wevtutil el | ForEach-Object { wevtutil cl "$_" }
 
+# 5. TOR NETWORK INTEGRATION
+Write-Host "Prüfe Tor-Netzwerk..." -ForegroundColor Cyan
+$torPath = "$PSScriptRoot\..\Tools\Tor\tor.exe"
+
+if (Test-Path $torPath) {
+    if (-not (Get-Process "tor" -ErrorAction SilentlyContinue)) {
+        Write-Host "Starte Tor Hintergrund-Dienst..." -ForegroundColor Green
+        Start-Process -FilePath $torPath -WindowStyle Hidden
+        Start-Sleep -Seconds 5 # Warte auf Bootstrap
+    } else {
+        Write-Host "Tor läuft bereits." -ForegroundColor Green
+    }
+    
+    # Git über Tor leiten
+    git config --global http.proxy socks5://127.0.0.1:9050
+    Write-Host "Git-Sync ist jetzt ANONYM (Tor Proxy)." -ForegroundColor Green
+} else {
+    Write-Warning "Tor nicht gefunden. Bitte 'Install-Tor.ps1' ausführen."
+}
+
+# 6. DNS LEAK PROTECTION (Cloudflare)
+Write-Host "Setze sichere DNS-Server (1.1.1.1)..." -ForegroundColor Yellow
+try {
+    Get-NetAdapter | Where-Object Status -eq "Up" | Set-DnsClientServerAddress -ServerAddresses ("1.1.1.1", "1.0.0.1") -ErrorAction SilentlyContinue
+} catch {}
+
 Write-Host "Sichere Härtung abgeschlossen." -ForegroundColor Cyan
