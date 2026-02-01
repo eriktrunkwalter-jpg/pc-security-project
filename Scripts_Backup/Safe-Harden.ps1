@@ -58,14 +58,29 @@ if (Test-Path $torPath) {
     if (-not (Get-Process "tor" -ErrorAction SilentlyContinue)) {
         Write-Host "Starte Tor Hintergrund-Dienst..." -ForegroundColor Green
         Start-Process -FilePath $torPath -WindowStyle Hidden
-        Start-Sleep -Seconds 5 # Warte auf Bootstrap
+        
+        # Warte auf Bootstrap (bis Port 9050 offen ist)
+        Write-Host "Warte auf Tor-Verbindung..." -NoNewline
+        for ($i=0; $i -lt 20; $i++) {
+            $conn = Test-NetConnection -ComputerName "127.0.0.1" -Port 9050 -InformationLevel Quiet
+            if ($conn) { break }
+            Start-Sleep -Seconds 2
+            Write-Host "." -NoNewline
+        }
+        Write-Host ""
     } else {
         Write-Host "Tor läuft bereits." -ForegroundColor Green
     }
     
-    # Git über Tor leiten
-    git config --global http.proxy socks5://127.0.0.1:9050
-    Write-Host "Git-Sync ist jetzt ANONYM (Tor Proxy)." -ForegroundColor Green
+    # Prüfe ob Tor wirklich bereit ist, bevor wir Git umleiten
+    if (Test-NetConnection -ComputerName "127.0.0.1" -Port 9050 -InformationLevel Quiet) {
+        # Git über Tor leiten
+        git config --global http.proxy socks5://127.0.0.1:9050
+        Write-Host "Git-Sync ist jetzt ANONYM (Tor Proxy)." -ForegroundColor Green
+    } else {
+        Write-Warning "Tor scheint nicht bereit zu sein. Proxy wird NICHT aktiviert, um Verbindung zu halten."
+        git config --global --unset http.proxy
+    }
 } else {
     Write-Warning "Tor nicht gefunden. Bitte 'Install-Tor.ps1' ausführen."
 }
