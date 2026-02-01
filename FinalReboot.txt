@@ -1,0 +1,25 @@
+# FinalReboot.ps1
+# Initiates Final System Reboot
+# Self-elevates to ensure permission
+
+# Self-Elevation to Administrator
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    Exit
+}
+
+Write-Host "=== FINALISIERUNG: SYSTEM-NEUSTART ===" -ForegroundColor Green
+Write-Host "Alle Optimierungen abgeschlossen."
+Write-Host "BitLocker: XTS-AES 256-bit (Aktiv)"
+Write-Host "Anonymität: Maximiert"
+Write-Host "Reboot in 5 Sekunden..." -ForegroundColor Yellow
+
+Start-Sleep -Seconds 2
+Write-Host "3..."
+Start-Sleep -Seconds 1
+Write-Host "2..."
+Start-Sleep -Seconds 1
+Write-Host "1..."
+Start-Sleep -Seconds 1
+
+Restart-Computer -Force

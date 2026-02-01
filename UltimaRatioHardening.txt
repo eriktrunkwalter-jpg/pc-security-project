@@ -1,0 +1,72 @@
+# UltimaRatioHardening.ps1
+# Closes "Heavy" entry points: LLMNR, NetBIOS, RDP, and enables ASR Rules.
+# WARNING: This disables some legacy network discovery features.
+
+# Self-Elevation
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    Exit
+}
+
+$ErrorActionPreference = "SilentlyContinue"
+Write-Host ">>> INITIATING ADVANCED HARDENING (ANTI-LATERAL MOVEMENT) <<<" -ForegroundColor Cyan
+
+# 1. DISABLE LLMNR (Link-Local Multicast Name Resolution)
+# Prevents "Responder" attacks where attackers spoof local names.
+$llmnrPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\NT DNSClient"
+if (!(Test-Path $llmnrPath)) { New-Item -Path $llmnrPath -Force | Out-Null }
+Set-ItemProperty -Path $llmnrPath -Name "EnableMulticast" -Value 0 -Force
+Write-Host "[NET] LLMNR Disabled (Anti-Responder)" -ForegroundColor Green
+
+# 2. DISABLE NETBIOS over TCP/IP
+# Legacy protocol, huge attack surface.
+$interfaces = Get-WmiObject Win32_NetworkAdapterConfiguration | Where-Object { $_.IPEnabled -eq $true }
+foreach ($iface in $interfaces) {
+    # SetTcpipNetbios 2 = Disabled
+    $iface.SetTcpipNetbios(2) | Out-Null
+}
+Write-Host "[NET] NetBIOS Disabled on all active interfaces" -ForegroundColor Green
+
+# 3. DISABLE RDP (Remote Desktop Protocol)
+# Closes port 3389 entry point.
+$rdpPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server"
+Set-ItemProperty -Path $rdpPath -Name "fDenyTSConnections" -Value 1 -Force
+Write-Host "[SVC] Remote Desktop Disabled (fDenyTSConnections=1)" -ForegroundColor Green
+
+# 4. DISABLE REMOTE REGISTRY
+# Prevents remote modification of registry.
+Stop-Service "RemoteRegistry" -Force -ErrorAction SilentlyContinue
+Set-Service "RemoteRegistry" -StartupType Disabled
+Write-Host "[SVC] Remote Registry Service Disabled" -ForegroundColor Green
+
+# 5. DISABLE AUTOPLAY / AUTORUN
+# Prevents USB payload execution on insert.
+$autoRunPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
+if (!(Test-Path $autoRunPath)) { New-Item -Path $autoRunPath -Force | Out-Null }
+Set-ItemProperty -Path $autoRunPath -Name "NoDriveTypeAutoRun" -Value 255 -Force
+Write-Host "[USB] AutoPlay/AutoRun Fully Disabled" -ForegroundColor Green
+
+# 6. ATTACK SURFACE REDUCTION (ASR) RULES
+# Requires Windows Defender.
+Write-Host "`n>>> ENABLING ATTACK SURFACE REDUCTION (ASR) RULES <<<" -ForegroundColor Magenta
+
+$asrRules = @{
+    "Block executable content from email client and webmail" = "be9ba2d9-53ea-4cdc-84e5-9b1eeee46550";
+    "Block all Office applications from creating child processes" = "d4f940ab-401b-4efc-aadc-ad5f3c50688a";
+    "Block Office applications from creating executable content" = "3b576869-a4ec-4529-8536-b80a7769e899";
+    "Block JavaScript or VBScript from launching downloaded executable content" = "d3e037e1-3eb8-44c8-a917-57927947596d";
+    "Block persistence through WMI event subscription" = "e6db77e5-3d12-4cf4-9463-c288586407db";
+}
+
+foreach ($ruleName in $asrRules.Keys) {
+    $guid = $asrRules[$ruleName]
+    try {
+        Add-MpPreference -AttackSurfaceReductionRules_Ids $guid -AttackSurfaceReductionRules_Actions Enabled -ErrorAction Stop
+        Write-Host "[ASR] Enabled: $ruleName" -ForegroundColor Green
+    } catch {
+        Write-Host "[ASR] Failed to enable: $ruleName (Defender might be managed/disabled)" -ForegroundColor Yellow
+    }
+}
+
+Write-Host "`n>>> ADVANCED HARDENING COMPLETE <<<" -ForegroundColor Cyan
+Read-Host "Press Enter to exit..."

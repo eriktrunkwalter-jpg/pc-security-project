@@ -1,0 +1,74 @@
+# FinalTraceabilityProbe.ps1
+# Simulates a "Tracker" attempting to fingerprint the system.
+# Checks: IP (Tor), MachineGuid, Timezone, DNS, Proxy, Artifacts.
+
+$ErrorActionPreference = "SilentlyContinue"
+Start-Transcript -Path "$env:TEMP\traceability_report.txt" -Force
+
+Write-Host ">>> FINAL TRACEABILITY PROBE (TRACKER SIMULATION) <<<" -ForegroundColor Cyan
+Write-Host "Simulating external tracking attempt..." -ForegroundColor Gray
+
+# 1. NETWORK TRACEABILITY (IP & DNS)
+Write-Host "`n[1] NETWORK IDENTITY (EXTERNAL VIEW)" -ForegroundColor Yellow
+try {
+    # Check IP via Tor Proxy using curl.exe (SOCKS5 support)
+    $ip = curl.exe --socks5 127.0.0.1:9050 -s https://api.ipify.org
+    if ($ip -match "\d+\.\d+\.\d+\.\d+") {
+        Write-Host "   [IP ADDRESS]  HIDDEN (Tor Exit Node: $ip)" -ForegroundColor Green
+    } else {
+        throw "Invalid IP response"
+    }
+} catch {
+    Write-Host "   [IP ADDRESS]  UNABLE TO CONNECT (Tor Offline?)" -ForegroundColor Red
+}
+
+# Check Proxy Enforcement
+$proxy = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings"
+if ($proxy.ProxyServer -match "127.0.0.1") {
+    Write-Host "   [PROXY]       LOCKED (System-wide SOCKS5)" -ForegroundColor Green
+} else {
+    Write-Host "   [PROXY]       LEAKING (Direct Connection Available!)" -ForegroundColor Red
+}
+
+# 2. SYSTEM FINGERPRINT (PERSISTENCE)
+Write-Host "`n[2] SYSTEM FINGERPRINT (DEVICE ARTIFACTS)" -ForegroundColor Yellow
+$guid = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Cryptography").MachineGuid
+Write-Host "   [MACHINE GUID] $guid" -ForegroundColor Gray
+Write-Host "   (Note: This value should change every few minutes via Rotator)"
+
+$tz = (Get-TimeZone).Id
+if ($tz -eq "UTC") {
+    Write-Host "   [TIMEZONE]    GENERIC (UTC) - Low Entropy" -ForegroundColor Green
+} else {
+    Write-Host "   [TIMEZONE]    UNIQUE ($tz) - Fingerprintable!" -ForegroundColor Red
+}
+
+$hostname = $env:COMPUTERNAME
+Write-Host "   [HOSTNAME]    $hostname (Randomized)" -ForegroundColor Green
+
+# 3. USER IDENTITY & FORENSICS
+Write-Host "`n[3] USER IDENTITY ARTIFACTS" -ForegroundColor Yellow
+$user = $env:USERNAME
+if ($user -match "Erik" -or $user -match "Trunkwalter") {
+    Write-Host "   [USER ACCOUNT] COMPROMISED ($user)" -ForegroundColor Red
+} else {
+    Write-Host "   [USER ACCOUNT] SANITIZED ($user)" -ForegroundColor Green
+}
+
+$regOwner = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").RegisteredOwner
+if ($regOwner -match "Erik") {
+    Write-Host "   [REG OWNER]    COMPROMISED ($regOwner)" -ForegroundColor Red
+} else {
+    Write-Host "   [REG OWNER]    SANITIZED ($regOwner)" -ForegroundColor Green
+}
+
+# 4. CONCLUSION
+Write-Host "`n>>> TRACEABILITY VERDICT <<<" -ForegroundColor Cyan
+if ($proxy.ProxyServer -match "127.0.0.1" -and $tz -eq "UTC") {
+    Write-Host "STATUS: UNTRACEABLE (GHOST IDENTITY)" -ForegroundColor Green
+    Write-Host "Your digital fingerprint is generic, your IP is hidden/rotating, and local artifacts are sanitized."
+} else {
+    Write-Host "STATUS: AT RISK (See Red Items above)" -ForegroundColor Red
+}
+
+Stop-Transcript

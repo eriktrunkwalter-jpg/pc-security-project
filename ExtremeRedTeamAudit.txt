@@ -1,0 +1,160 @@
+# ExtremeRedTeamAudit.ps1
+# Simulates advanced attack vectors and forensic analysis to audit system hardening.
+# Checks: DLL Hijacking, LSA Protection, DMA, BitLocker Strength, Anonymity/Telemetry, Forensics.
+
+# Self-Elevation
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "Elevating to Administrator for Deep Audit..." -ForegroundColor Yellow
+    Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    Exit
+}
+
+$ErrorActionPreference = "SilentlyContinue"
+$report = @()
+
+function Log-Result ($category, $test, $status, $details) {
+    $color = if ($status -eq "PASS") { "Green" } elseif ($status -eq "WARNING") { "Yellow" } else { "Red" }
+    Write-Host "[$category] $test : " -NoNewline
+    Write-Host "$status" -ForegroundColor $color
+    if ($details) { Write-Host "    -> $details" -ForegroundColor Gray }
+    $logLine = "[$category] $test : $status - $details"
+    $global:report += $logLine
+    Log-ToFile $logLine
+}
+
+Write-Host "`n=== EXTREME RED TEAM AUDIT: SECURITY & ANONYMITY ===`n" -ForegroundColor Cyan
+
+# Clear previous report
+$reportFile = "$env:USERPROFILE\Documents\trae_projects\pc\AuditResult.txt"
+"=== EXTREME RED TEAM AUDIT REPORT ===" | Out-File -FilePath $reportFile -Encoding utf8
+
+function Log-ToFile ($msg) {
+    $msg | Out-File -FilePath $reportFile -Append -Encoding utf8
+}
+
+Log-ToFile "Date: $(Get-Date)"
+Log-ToFile "------------------------------------------------"
+
+# 1. ENCRYPTION & PHYSICAL SECURITY
+Write-Host "--- PHASE 1: CRYPTO & PHYSICAL SECURITY ---" -ForegroundColor Magenta
+# BitLocker Strength
+$bl = Get-BitLockerVolume -MountPoint C:\
+if ($bl.EncryptionMethod -eq "XtsAes256" -and $bl.ProtectionStatus -eq "On") {
+    Log-Result "CRYPTO" "BitLocker Algorithm" "PASS" "XTS-AES 256-bit Active"
+} else {
+    Log-Result "CRYPTO" "BitLocker Algorithm" "FAIL" "Current: $($bl.EncryptionMethod) / Status: $($bl.ProtectionStatus)"
+}
+
+# DMA Protection (Kernel DMA Protection)
+$dma = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" -Name "Enabled" -ErrorAction SilentlyContinue
+# Note: Actual DMA protection check is complex via registry alone, checking VBS/HVCI as proxy
+$vbs = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard" -Name "EnableVirtualizationBasedSecurity" -ErrorAction SilentlyContinue
+if ($vbs.EnableVirtualizationBasedSecurity -eq 0) {
+     Log-Result "PHYSICAL" "VBS/DMA Protection" "WARNING" "VBS Disabled (Stability Mode) - DMA Attack Surface Open"
+} else {
+     Log-Result "PHYSICAL" "VBS/DMA Protection" "PASS" "VBS Enabled"
+}
+
+# LSA Protection (Pass-the-Hash Mitigation)
+$lsa = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "RunAsPPL" -ErrorAction SilentlyContinue
+if ($lsa.RunAsPPL -eq 1) {
+    Log-Result "OS-SEC" "LSA Protection" "PASS" "LSA run as PPL enabled"
+} else {
+    Log-Result "OS-SEC" "LSA Protection" "WARNING" "LSA Protection not forced (Mimikatz risk)"
+}
+
+# 2. ATTACK SURFACE (DLL HIJACKING & SERVICES)
+Write-Host "`n--- PHASE 2: ATTACK SURFACE ---" -ForegroundColor Magenta
+
+# DLL Hijacking in PATH
+$vulnerablePaths = @()
+$env:Path.Split(';') | ForEach-Object {
+    $p = $_.Trim()
+    if ($p -and (Test-Path $p)) {
+        try {
+            $acl = Get-Acl -Path $p
+            $access = $acl.Access | Where-Object { 
+                ($_.IdentityReference -match "Users" -or $_.IdentityReference -match "Everyone") -and 
+                ($_.FileSystemRights -match "Write" -or $_.FileSystemRights -match "FullControl" -or $_.FileSystemRights -match "Modify")
+            }
+            if ($access) { $vulnerablePaths += $p }
+        } catch {}
+    }
+}
+if ($vulnerablePaths.Count -eq 0) {
+    Log-Result "ATTACK-SURF" "DLL Hijacking (PATH)" "PASS" "No writable PATH directories found for standard users"
+} else {
+    Log-Result "ATTACK-SURF" "DLL Hijacking (PATH)" "FAIL" "Writable PATHs found: $($vulnerablePaths -join ', ')"
+}
+
+# Unquoted Service Paths
+$unquoted = Get-WmiObject Win32_Service | Where-Object { $_.PathName -notmatch '^"' -and $_.PathName -match ' ' -and $_.PathName -notmatch '^C:\\Windows' }
+if ($unquoted) {
+    Log-Result "ATTACK-SURF" "Unquoted Service Paths" "FAIL" "Found $($unquoted.Count) services vulnerable to interception"
+} else {
+    Log-Result "ATTACK-SURF" "Unquoted Service Paths" "PASS" "All service paths quoted or safe"
+}
+
+# 3. ANONYMITY & NETWORK PRIVACY
+Write-Host "`n--- PHASE 3: ANONYMITY & NETWORK ---" -ForegroundColor Magenta
+
+# DNS Leak Check
+$dns = Get-DnsClientServerAddress -InterfaceAlias "Wi-Fi", "Ethernet" | Where-Object {$_.ServerAddresses.Count -gt 0}
+$secureDns = $false
+foreach ($iface in $dns) {
+    if ($iface.ServerAddresses -contains "1.1.1.1" -or $iface.ServerAddresses -contains "9.9.9.9") {
+        $secureDns = $true
+    }
+}
+if ($secureDns) {
+    Log-Result "PRIVACY" "DNS Leak / Provider" "PASS" "Using Secure DNS (Cloudflare/Quad9)"
+} else {
+    Log-Result "PRIVACY" "DNS Leak / Provider" "FAIL" "Using ISP/Insecure DNS: $($dns.ServerAddresses -join ', ')"
+}
+
+# Telemetry
+$telemetry = Get-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "AllowTelemetry" -ErrorAction SilentlyContinue
+if ($telemetry.AllowTelemetry -eq 0) {
+    Log-Result "PRIVACY" "Windows Telemetry" "PASS" "Telemetry Disabled (0)"
+} else {
+    Log-Result "PRIVACY" "Windows Telemetry" "FAIL" "Telemetry Active"
+}
+
+# Advertising ID
+$advId = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo" -Name "Enabled" -ErrorAction SilentlyContinue
+if ($advId -eq $null -or $advId.Enabled -eq 0) {
+    Log-Result "PRIVACY" "Advertising ID" "PASS" "Disabled"
+} else {
+    Log-Result "PRIVACY" "Advertising ID" "FAIL" "Enabled"
+}
+
+# 4. FORENSIC ARTIFACTS
+Write-Host "`n--- PHASE 4: FORENSIC RESIDUE ---" -ForegroundColor Magenta
+
+# Recent Docs
+$recentPath = "$env:APPDATA\Microsoft\Windows\Recent"
+$recentCount = (Get-ChildItem -Path $recentPath -Force -ErrorAction SilentlyContinue).Count
+if ($recentCount -eq 0) {
+    Log-Result "FORENSICS" "Recent Documents" "PASS" "Clean (0 items)"
+} else {
+    Log-Result "FORENSICS" "Recent Documents" "FAIL" "Found $recentCount artifacts (User activity visible)"
+}
+
+# PowerShell History
+$psHistory = (Get-PSReadlineOption).HistorySavePath
+if (Test-Path $psHistory) {
+    Log-Result "FORENSICS" "PowerShell History" "FAIL" "History file exists"
+} else {
+    Log-Result "FORENSICS" "PowerShell History" "PASS" "No history file found"
+}
+
+# Event Logs (Simple check for recent activity)
+$logSec = Get-EventLog -LogName Security -Newest 1 -ErrorAction SilentlyContinue
+if ($logSec) {
+    Log-Result "FORENSICS" "Security Event Log" "WARNING" "Logging Active (Normal behavior, but leaves traces)"
+}
+
+Write-Host "`n=== AUDIT COMPLETE ===" -ForegroundColor Cyan
+Log-ToFile "------------------------------------------------"
+Log-ToFile "AUDIT COMPLETE"
+

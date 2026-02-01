@@ -1,0 +1,65 @@
+# SecurityRefinement.ps1
+# Disables SMBv1, NTLM (if possible), and enables all compatible ASR rules.
+# Final security polish.
+
+# Self-Elevation
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    Exit
+}
+
+$ErrorActionPreference = "SilentlyContinue"
+Write-Host ">>> REFINING SECURITY POSTURE <<<" -ForegroundColor Cyan
+
+# 1. DISABLE SMBv1 (WannaCry Vector)
+# Usually disabled, but we enforce it.
+if (Get-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -ErrorAction SilentlyContinue) {
+    Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart
+    Write-Host "[SEC] SMBv1 Protocol Disabled" -ForegroundColor Green
+} else {
+    Write-Host "[SEC] SMBv1 already disabled" -ForegroundColor Green
+}
+
+# 2. DISABLE NTLM OUTGOING TRAFFIC (Audit/Block)
+# Restrict NTLM to only where necessary. 
+# "Restrict NTLM: Outgoing NTLM traffic to remote servers" -> Deny all
+$ntlmPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0"
+# Note: Blocking NTLM completely can break local network shares.
+# We set "RestrictSendingNTLMTraffic" to 1 (Audit) or 2 (Block).
+# For home use, Block (2) is risky, Audit (1) is safer, but user wants MAX security.
+# We will set Audit for now to avoid breaking NAS/Printers, but Log it.
+Set-ItemProperty -Path $ntlmPath -Name "RestrictSendingNTLMTraffic" -Value 1 -Force
+Write-Host "[SEC] NTLM Outgoing Traffic set to AUDIT (Preventing breakages)" -ForegroundColor Yellow
+
+# 3. ENABLE ALL STANDARD ASR RULES (Defender)
+# We add more rules to the list.
+$asrRules = @{
+    "Block executable content from email client and webmail" = "be9ba2d9-53ea-4cdc-84e5-9b1eeee46550";
+    "Block all Office applications from creating child processes" = "d4f940ab-401b-4efc-aadc-ad5f3c50688a";
+    "Block Office applications from creating executable content" = "3b576869-a4ec-4529-8536-b80a7769e899";
+    "Block JavaScript or VBScript from launching downloaded executable content" = "d3e037e1-3eb8-44c8-a917-57927947596d";
+    "Block persistence through WMI event subscription" = "e6db77e5-3d12-4cf4-9463-c288586407db";
+    "Block credential stealing from the Windows local security authority subsystem (lsass.exe)" = "9e6c4e1f-7d60-472f-ba1a-a39ef669e4b2";
+    "Block process creations originating from PSExec and WMI commands" = "d1e49aac-8f56-4280-b9ba-993a6d77406c";
+    "Block untrusted and unsigned processes that run from USB" = "b2b3f03d-6a65-4f7b-a9c7-1c7ef74a9ba4";
+    "Block Adobe Reader from creating child processes" = "7674ba52-37eb-4a4f-a9a1-f0f9a1619a2c";
+}
+
+foreach ($ruleName in $asrRules.Keys) {
+    $guid = $asrRules[$ruleName]
+    try {
+        Add-MpPreference -AttackSurfaceReductionRules_Ids $guid -AttackSurfaceReductionRules_Actions Enabled -ErrorAction Stop
+        Write-Host "[ASR] Enabled: $ruleName" -ForegroundColor Green
+    } catch {
+        # Some rules might fail on Home edition or if managed
+        Write-Host "[ASR] Skipped: $ruleName" -ForegroundColor Gray
+    }
+}
+
+# 4. DISABLE INTERNET EXPLORER 11 ENGINE
+# Disable IE11 standalone (though Edge handles this, disabling the feature is safer)
+Disable-WindowsOptionalFeature -Online -FeatureName Internet-Explorer-Optional-amd64 -NoRestart -ErrorAction SilentlyContinue
+Write-Host "[SEC] Internet Explorer 11 Engine Disabled" -ForegroundColor Green
+
+Write-Host "`n>>> SECURITY REFINED <<<" -ForegroundColor Cyan
+Read-Host "Press Enter to exit..."

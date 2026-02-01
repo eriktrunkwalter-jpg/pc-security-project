@@ -1,0 +1,48 @@
+# MonitorBitLocker.ps1
+# Monitors BitLocker progress and notifies when complete.
+# Runs in a loop, checking every 30 seconds.
+
+Write-Host ">>> MONITORING BITLOCKER ENCRYPTION <<<" -ForegroundColor Cyan
+Write-Host "You will be notified when encryption hits 100%." -ForegroundColor Yellow
+Write-Host "Do not close this window." -ForegroundColor Gray
+
+$Drive = "C:"
+
+while ($true) {
+    try {
+        # Parse manage-bde output for percentage
+        $status = manage-bde -status $Drive
+        $line = $status | Where-Object { $_ -match "Prozent" -or $_ -match "Percentage" }
+        
+        if ($line) {
+            # Extract number
+            $percentStr = $line -replace "[^0-9,.]", ""
+            # Handle comma/dot decimal
+            $percent = [double]$percentStr.Replace(",", ".")
+            
+            $timestamp = Get-Date -Format "HH:mm:ss"
+            Write-Host "[$timestamp] Encryption Progress: $percent %" -ForegroundColor Green
+            
+            if ($percent -ge 100.0) {
+                Write-Host "`n>>> ENCRYPTION COMPLETE! <<<" -ForegroundColor Cyan
+                
+                # Visual Notification (Popup)
+                $wshell = New-Object -ComObject Wscript.Shell
+                $wshell.Popup("BitLocker Encryption Completed Successfully!", 0, "Security Alert", 64) | Out-Null
+                
+                # Audio Notification (Beeps)
+                [System.Console]::Beep(1000, 500)
+                [System.Console]::Beep(1500, 500)
+                [System.Console]::Beep(2000, 500)
+                
+                break
+            }
+        } else {
+            Write-Host "Could not parse status. Retrying..." -ForegroundColor DarkGray
+        }
+    } catch {
+        Write-Host "Error querying status. Retrying..." -ForegroundColor Red
+    }
+    
+    Start-Sleep -Seconds 30
+}

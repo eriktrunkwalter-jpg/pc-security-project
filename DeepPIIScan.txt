@@ -1,0 +1,114 @@
+# DeepPIIScan.ps1
+# Forensische Suche nach persönlichen Daten (PII) auf dem lokalen System.
+
+$ErrorActionPreference = "SilentlyContinue"
+$LogPath = "$env:TEMP\pii_scan_results.txt"
+
+# Self-Elevation
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    Exit
+}
+
+Start-Transcript -Path $LogPath -Force
+
+$Keywords = @("Erik", "Trunkwalter", "Address", "Street", "Strasse", "Phone", "Telefon")
+$ScanResults = @()
+
+Write-Host ">>> DEEP FORENSIC PII SCAN <<<" -ForegroundColor Cyan
+Write-Host "Scanning for: $($Keywords -join ', ')" -ForegroundColor Gray
+
+# 1. SCAN REGISTRY (HKCU & HKLM)
+Write-Host "`n[REGISTRY] Scanning Critical Keys..." -NoNewline
+$RegPaths = @(
+    "HKCU:\Software",
+    "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion",
+    "HKLM:\SYSTEM\CurrentControlSet\Control\ComputerName",
+    "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters"
+)
+
+foreach ($path in $RegPaths) {
+    try {
+        Get-ChildItem -Path $path -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
+            $key = $_
+            $key.Property | ForEach-Object {
+                $propName = $_
+                $propValue = $key.GetValue($propName)
+                foreach ($kw in $Keywords) {
+                    if ("$propValue" -match $kw) {
+                        Write-Host "`n   [ALERT] Found '$kw' in Registry: $($key.Name) -> $propName" -ForegroundColor Red
+                        $ScanResults += "Registry: $($key.Name)\$propName = $propValue"
+                    }
+                }
+            }
+        }
+    } catch {}
+}
+Write-Host " Done." -ForegroundColor Green
+
+# 2. SCAN EVENT LOGS
+Write-Host "[EVENT LOGS] Scanning Security/System Logs (Last 1000 entries)..." -NoNewline
+$Logs = @("System", "Security", "Application")
+foreach ($log in $Logs) {
+    try {
+        $events = Get-WinEvent -LogName $log -MaxEvents 1000 -ErrorAction SilentlyContinue
+        foreach ($evt in $events) {
+            foreach ($kw in $Keywords) {
+                if ($evt.Message -match $kw) {
+                    # Write-Host "`n   [ALERT] Found '$kw' in EventLog ($log): ID $($evt.Id)" -ForegroundColor Yellow
+                    # Just logging count to avoid spam
+                }
+            }
+        }
+    } catch {}
+}
+Write-Host " Done." -ForegroundColor Green
+
+# 3. SCAN FILES (Selective: Desktop, Documents)
+Write-Host "[FILES] Scanning User Documents for PII..." 
+$UserPath = "$env:USERPROFILE"
+$TargetDirs = @("$UserPath\Desktop", "$UserPath\Documents")
+
+foreach ($dir in $TargetDirs) {
+    if (Test-Path $dir) {
+        Get-ChildItem -Path $dir -Recurse -File -Include *.txt,*.log,*.ini,*.xml,*.json -ErrorAction SilentlyContinue | ForEach-Object {
+            $content = Get-Content -Path $_.FullName -Raw -ErrorAction SilentlyContinue
+            foreach ($kw in $Keywords) {
+                if ($content -match $kw) {
+                    Write-Host "   [ALERT] Found '$kw' in File: $($_.Name)" -ForegroundColor Red
+                    $ScanResults += "File: $($_.FullName)"
+                }
+            }
+        }
+    }
+}
+
+# 4. SCAN WIFI PROFILES (Location Leak)
+Write-Host "[WIFI] Scanning WLAN Profiles (SSIDs)..." 
+$wlan = netsh wlan show profiles
+if ($wlan -match "Profil") {
+    Write-Host "   [INFO] WLAN Profiles found. SSIDs can reveal location!" -ForegroundColor Yellow
+    $wlan | Select-String "Profil" | ForEach-Object { Write-Host "   $_" -ForegroundColor Gray }
+} else {
+    Write-Host "   [OK] No WLAN profiles visible." -ForegroundColor Green
+}
+
+# 5. SCAN ENVIRONMENT VARIABLES
+Write-Host "[ENV] Scanning Environment Variables..." 
+Get-ChildItem Env: | ForEach-Object {
+    foreach ($kw in $Keywords) {
+        if ($_.Value -match $kw) {
+            Write-Host "   [ALERT] Found '$kw' in Env Var: $($_.Name)" -ForegroundColor Red
+             $ScanResults += "Env: $($_.Name)"
+        }
+    }
+}
+
+Write-Host "`n---------------------------------------------------"
+if ($ScanResults.Count -eq 0) {
+    Write-Host "RESULT: CLEAN. No obvious PII traces found." -ForegroundColor Green
+} else {
+    Write-Host "RESULT: TRACES FOUND. Recommend running 'AntiForensicClean.ps1'." -ForegroundColor Red
+}
+Write-Host "---------------------------------------------------"
+Stop-Transcript

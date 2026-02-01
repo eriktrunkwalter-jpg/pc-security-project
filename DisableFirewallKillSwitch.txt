@@ -1,0 +1,6 @@
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -File "$PSCommandPath""
+    Exit
+}
+NetSh Advfirewall set allprofiles firewallpolicy blockinbound,allowoutbound
+Write-Host '>>> KILL SWITCH DISABLED. NORMAL INTERNET RESTORED. <<<' -ForegroundColor Green

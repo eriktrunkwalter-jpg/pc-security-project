@@ -1,0 +1,21 @@
+﻿=== NUCLEAR RED TEAM AUDIT REPORT ===
+Date: 02/01/2026 03:01:37
+------------------------------------------------
+[BLOCKED] Mimikatz (LSA Protection) - RunAsPPL active
+[BLOCKED] CredDump (Credential Guard) - Credential Guard Active
+[BLOCKED] PrivEsc (AlwaysInstallElevated) - Safe
+[BLOCKED] Forensics (Hibernation File) - Hibernation disabled
+[BLOCKED] Forensics (Pagefile Wipe) - Wipes at shutdown
+[WARNING] Forensics (Shadow Copies) - Shadow Copies exist (Recoverable data)
+[CLEAN] Privacy (Recent Docs MRU) - Minimal MRU entries found
+[WARNING] Network (Open Ports) - Found 22 listening ports on external interfaces
+   - Port 49672 (792)
+   - Port 49668 (2812)
+   - Port 49667 (1532)
+[WARNING] Network (Global Proxy) - Proxy detected (Check output)
+    Aktuelle WinHTTP-Proxyeinstellungen:      DirectAccess (kein Proxyserver). 
+[CLEAN] Network (Hosts File) - Default Hosts file
+[BLOCKED] Tracking (Advertising ID) - Ad ID Disabled
+[BLOCKED] Tracking (Activity Feed) - Timeline Disabled
+------------------------------------------------
+NUCLEAR AUDIT END

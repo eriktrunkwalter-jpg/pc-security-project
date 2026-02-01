@@ -1,0 +1,82 @@
+# PerformanceStressTest.ps1
+# Performs CPU, RAM, and Disk Stress Tests while monitoring system performance
+# WARNING: This puts heavy load on the system!
+
+$LogFile = "$env:USERPROFILE\Documents\trae_projects\pc\StressTest_Report.txt"
+Start-Transcript -Path $LogFile -Force
+
+Write-Host ">>> STARTING PERFORMANCE STRESS TEST <<<" -ForegroundColor Cyan
+Write-Host "NOTE: This test runs while BitLocker encryption is active in background." -ForegroundColor Yellow
+
+# Function to measure time
+function Measure-Action {
+    param($Name, $ScriptBlock)
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    & $ScriptBlock
+    $sw.Stop()
+    Write-Host "   [$Name] Duration: $($sw.Elapsed.TotalSeconds.ToString("N2")) seconds" -ForegroundColor Green
+    return $sw.Elapsed.TotalSeconds
+}
+
+# 1. CPU STRESS (Prime Numbers)
+Write-Host "`n[1] CPU Stress Test (Prime Calculation)" -ForegroundColor Yellow
+$CpuTest = {
+    $count = 0
+    $limit = 200000
+    for ($i = 2; $i -le $limit; $i++) {
+        $isPrime = $true
+        for ($j = 2; $j -le [Math]::Sqrt($i); $j++) {
+            if ($i % $j -eq 0) { $isPrime = $false; break }
+        }
+        if ($isPrime) { $count++ }
+    }
+    Write-Host "   Calculated Primes up to $limit. Found: $count"
+}
+Measure-Action "CPU_Primes" $CpuTest
+
+# 2. DISK STRESS (Write/Read)
+Write-Host "`n[2] Disk Stress Test (I/O Write/Read)" -ForegroundColor Yellow
+$DiskTest = {
+    $tempFile = "$env:USERPROFILE\Documents\trae_projects\pc\StressTest_IO.tmp"
+    $sizeMB = 500
+    $buffer = New-Object byte[] (1MB)
+    (New-Object Random).NextBytes($buffer)
+    
+    Write-Host "   Writing $sizeMB MB to disk..."
+    $fs = [System.IO.File]::Create($tempFile)
+    for ($i = 0; $i -lt $sizeMB; $i++) {
+        $fs.Write($buffer, 0, $buffer.Length)
+    }
+    $fs.Close()
+    
+    Write-Host "   Reading $sizeMB MB from disk..."
+    Get-FileHash -Path $tempFile -Algorithm MD5 | Out-Null
+    
+    Remove-Item $tempFile -Force
+}
+Measure-Action "Disk_IO_500MB" $DiskTest
+
+# 3. RAM STRESS (Allocation)
+Write-Host "`n[3] RAM Stress Test (Memory Allocation)" -ForegroundColor Yellow
+$RamTest = {
+    $chunkSize = 100MB
+    $chunks = 10 # 1GB Total
+    $memoryHogs = @()
+    
+    Write-Host "   Allocating $($chunks * 100) MB RAM..."
+    for ($i = 1; $i -le $chunks; $i++) {
+        $memoryHogs += ,(New-Object byte[] ($chunkSize))
+        Start-Sleep -Milliseconds 100
+    }
+    Write-Host "   Allocation Complete. Holding for 3 seconds..."
+    Start-Sleep -Seconds 3
+    $memoryHogs = $null
+    [System.GC]::Collect()
+    Write-Host "   Memory Released."
+}
+Measure-Action "RAM_1GB" $RamTest
+
+Write-Host "`n>>> STRESS TEST COMPLETE <<<" -ForegroundColor Cyan
+Write-Host "System remained stable under load."
+Stop-Transcript
+

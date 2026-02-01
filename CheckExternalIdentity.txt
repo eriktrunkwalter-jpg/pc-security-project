@@ -1,0 +1,39 @@
+# CheckExternalIdentity.ps1
+# Checks what is visible to the outside world (IP, ISP, Location).
+# Demonstrates why system hardening != network anonymity.
+
+$ErrorActionPreference = "SilentlyContinue"
+Write-Host ">>> CHECKING DIGITAL IDENTITY <<<" -ForegroundColor Cyan
+
+try {
+    # 1. External IP & Geo
+    $ipInfo = Invoke-RestMethod -Uri "http://ip-api.com/json" -TimeoutSec 5
+    
+    Write-Host "--- WHAT WEBSITES SEE ---" -ForegroundColor Yellow
+    Write-Host "Public IP:   $($ipInfo.query)" -ForegroundColor Red
+    Write-Host "ISP:         $($ipInfo.isp)" -ForegroundColor Red
+    Write-Host "Location:    $($ipInfo.city), $($ipInfo.country)" -ForegroundColor Red
+    Write-Host "Organization:$($ipInfo.org)" -ForegroundColor Red
+    
+    Write-Host "`n[ANALYSIS]" -ForegroundColor White
+    if ($ipInfo.isp -match "Telekom" -or $ipInfo.isp -match "Vodafone" -or $ipInfo.isp -match "O2" -or $ipInfo.isp -match "1&1") {
+        Write-Host "Result: YOU ARE TRACEABLE." -ForegroundColor Red
+        Write-Host "Reason: You are using a residential ISP connection directly."
+        Write-Host "        The website knows your IP. The ISP knows you visited the website IP."
+        Write-Host "        DNS encryption (DoH) hides the *name* lookup, but not the *connection*."
+    } else {
+        Write-Host "Result: Potentially obscured (Cloud/VPN detected?)" -ForegroundColor Green
+    }
+
+} catch {
+    Write-Host "Could not retrieve IP info. Internet might be blocked or down." -ForegroundColor Red
+}
+
+Write-Host "`n--- BROWSER FINGERPRINT RISKS ---" -ForegroundColor Yellow
+Write-Host "Even with a hidden IP, you are tracked via:"
+Write-Host "1. Canvas Fingerprinting (Graphics card unique hash)"
+Write-Host "2. WebRTC Leaks (Local IP exposure)"
+Write-Host "3. Screen Resolution & Fonts"
+Write-Host "4. Browser Version & User Agent"
+
+Write-Host "`n>>> END OF CHECK <<<" -ForegroundColor Cyan

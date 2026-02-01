@@ -1,0 +1,77 @@
+# DeployMultiHopChain.ps1
+# Deploys a Multi-Hop VPN/Proxy Chain using Tor.
+# 1. Installs Tor Browser (via Winget) if missing.
+# 2. Configures Tor to run as a background service (SOCKS5 Proxy on Port 9050).
+# 3. Sets Windows System Proxy to 127.0.0.1:9050 (Forcing traffic through Tor).
+
+# Self-Elevation
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    Exit
+}
+
+$ErrorActionPreference = "SilentlyContinue"
+Clear-Host
+Write-Host ">>> DEPLOYING MULTI-HOP CHAIN (TOR) <<<" -ForegroundColor Cyan
+
+# 1. INSTALL TOR (if needed)
+$torPath = "C:\Program Files\Tor Browser\Browser\TorBrowser\Tor\tor.exe"
+if (!(Test-Path $torPath)) {
+    Write-Host "[INSTALL] Tor Browser not found. Installing via Winget..." -ForegroundColor Yellow
+    # Note: Winget might require interaction, we try silent.
+    # ID: TorProject.TorBrowser
+    winget install --id TorProject.TorBrowser --silent --accept-package-agreements --accept-source-agreements
+    
+    # Wait for install to possibly finish (simple pause)
+    Start-Sleep -Seconds 15
+    
+    if (!(Test-Path $torPath)) {
+        # Try to find it if installed elsewhere
+        $found = Get-ChildItem -Path "C:\Program Files" -Filter "tor.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($found) { $torPath = $found.FullName }
+    }
+} else {
+    Write-Host "[CHECK] Tor is already installed." -ForegroundColor Green
+}
+
+if (!(Test-Path $torPath)) {
+    Write-Host "[ERROR] Tor installation failed or path not found. Please install Tor Browser manually." -ForegroundColor Red
+    Exit
+}
+
+# 2. CONFIGURE TORRC (SOCKS Port 9050)
+$torrcPath = "$env:TEMP\torrc_custom"
+$torrcContent = @"
+SocksPort 9050
+# Optimize for anonymity/security
+SafeLogging 1
+Log notice file $env:TEMP\tor_log.txt
+DataDirectory $env:TEMP\tor_data
+GeoIPFile C:\Program Files\Tor Browser\Browser\TorBrowser\Data\Tor\geoip
+GeoIPv6File C:\Program Files\Tor Browser\Browser\TorBrowser\Data\Tor\geoip6
+"@
+Set-Content -Path $torrcPath -Value $torrcContent
+Write-Host "[CONFIG] Custom torrc created at $torrcPath" -ForegroundColor Green
+
+# 3. START TOR BACKGROUND PROCESS
+Write-Host "[START] Starting Tor Background Service..." -ForegroundColor Yellow
+Stop-Process -Name "tor" -Force -ErrorAction SilentlyContinue
+Start-Process -FilePath $torPath -ArgumentList "-f `"$torrcPath`"" -WindowStyle Hidden
+Write-Host "[START] Tor running on 127.0.0.1:9050" -ForegroundColor Green
+
+# 4. ENFORCE SYSTEM PROXY (SOCKS5)
+Write-Host "[PROXY] Enforcing System-Wide SOCKS5 Proxy..." -ForegroundColor Yellow
+$proxyPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings"
+Set-ItemProperty -Path $proxyPath -Name "ProxyEnable" -Value 1
+Set-ItemProperty -Path $proxyPath -Name "ProxyServer" -Value "socks=127.0.0.1:9050"
+Set-ItemProperty -Path $proxyPath -Name "ProxyOverride" -Value "<local>"
+
+# Force refresh of proxy settings (requires a trick or simple restart of apps)
+# We use a netsh command as fallback for WinHTTP
+Write-Host "[PROXY] Setting WinHTTP Proxy..." -ForegroundColor Yellow
+netsh winhttp set proxy proxy-server="socks=127.0.0.1:9050" bypass-list="<local>"
+
+Write-Host "`n>>> MULTI-HOP CHAIN ACTIVE <<<" -ForegroundColor Cyan
+Write-Host "Traffic is now routed through 3 random nodes (Guard -> Middle -> Exit)."
+Write-Host "Use 'AutoIdentityRotator.ps1' to rotate this chain automatically."
+Read-Host "Press Enter to exit..."

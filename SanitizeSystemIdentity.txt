@@ -1,0 +1,77 @@
+$ErrorActionPreference = "SilentlyContinue"
+
+# Self-Elevation for Registry/User modifications
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    Exit
+}
+
+# 1. Sanitize Scripts Content
+Write-Host ">>> SANITIZING SCRIPTS <<<" -ForegroundColor Cyan
+$files = Get-ChildItem -Path "$PSScriptRoot" -Filter *.ps1 -Recurse
+
+foreach ($file in $files) {
+    # Skip this script itself to avoid read/write conflict during execution
+    if ($file.Name -eq "SanitizeSystemIdentity.ps1") { continue }
+
+    $content = Get-Content -Path $file.FullName -Raw
+    $originalContent = $content
+
+    # Step 1: Replace Absolute Paths with Environment Variables
+    # Handles C:\Users\Erik -> $env:USERPROFILE
+    $content = $content -replace 'C:\\Users\\Erik', '$env:USERPROFILE'
+    $content = $content -replace 'C:\\Users\\Trunkwalter', '$env:USERPROFILE'
+    
+    # Step 2: Replace Names in Strings/Comments
+    $content = $content -replace 'Erik Trunkwalter', 'User'
+    $content = $content -replace 'Trunkwalter', 'User'
+    
+    # Step 3: Replace "Erik" carefully (avoiding system paths if any remained, though Step 1 should catch them)
+    # We use regex word boundaries to avoid replacing parts of other words if necessary, 
+    # but "Erik" is likely distinct.
+    $content = $content -replace '\bErik\b', 'User'
+
+    if ($content -ne $originalContent) {
+        Set-Content -Path $file.FullName -Value $content
+        Write-Host "   [FIXED] $($file.Name)" -ForegroundColor Green
+    }
+}
+
+# 2. Sanitize Windows Registry (Registered Owner)
+Write-Host "`n>>> SANITIZING REGISTRY <<<" -ForegroundColor Cyan
+$regPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+
+try {
+    Set-ItemProperty -Path $regPath -Name "RegisteredOwner" -Value "User" -ErrorAction Stop
+    Set-ItemProperty -Path $regPath -Name "RegisteredOrganization" -Value "" -ErrorAction SilentlyContinue
+    Write-Host "   [OK] RegisteredOwner set to 'User'" -ForegroundColor Green
+} catch {
+    Write-Host "   [!] Need Admin rights for Registry. Re-run as Admin." -ForegroundColor Red
+}
+
+# 3. Sanitize User Account Name (Display Name)
+Write-Host "`n>>> SANITIZING USER ACCOUNT <<<" -ForegroundColor Cyan
+# Try to rename current user display name (Full Name)
+# Note: The username 'Erik' (login name) cannot be changed easily while logged in.
+# We change the "Full Name" property which appears in lock screen/start menu.
+try {
+    $currentName = $env:USERNAME
+    net user $currentName /fullname:"User"
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "   [OK] User Full Name changed to 'User'" -ForegroundColor Green
+    } else {
+         Write-Host "   [!] Could not change Full Name (Net User error)." -ForegroundColor Red
+    }
+} catch {
+    Write-Host "   [ERROR] Failed to set user name." -ForegroundColor Red
+}
+
+# 4. Clear Computer Description
+try {
+    $os = Get-WmiObject Win32_OperatingSystem
+    $os.Description = "Secure System"
+    $os.Put() | Out-Null
+    Write-Host "   [OK] Computer Description cleared." -ForegroundColor Green
+} catch {}
+
+Write-Host "`n[DONE] System Identity Sanitized." -ForegroundColor Cyan

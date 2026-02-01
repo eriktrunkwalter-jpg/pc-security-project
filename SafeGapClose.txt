@@ -1,0 +1,63 @@
+# SafeGapClose.ps1
+# Mitigates DMA and Physical Access risks WITHOUT enabling unstable VBS/Hypervisor.
+# Focus: External DMA Blocking, Driver Hardening, Legacy Protocol Removal.
+
+# Self-Elevation
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    Exit
+}
+
+$ErrorActionPreference = "SilentlyContinue"
+Write-Host ">>> CLOSING RESIDUAL GAPS (SAFE MODE) <<<" -ForegroundColor Cyan
+
+# 1. CONFIGURE DMA GUARD (External Device Blocking)
+# Prevents DMA attacks via Thunderbolt/USB4 by blocking devices when locked or always.
+# Policy: HKLM\Software\Policies\Microsoft\Windows\DmaGuard
+$dmaPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DmaGuard"
+if (!(Test-Path $dmaPath)) { New-Item -Path $dmaPath -Force | Out-Null }
+
+# DeviceEnumerationPolicy: 
+# 0 = Allow all
+# 1 = Allow only while logged in (Blocks attacks when locked/stolen)
+# 2 = Block all (Most secure, breaks docks)
+# We choose '1' as a safe balance that significantly hardens against "Evil Maid" attacks.
+Set-ItemProperty -Path $dmaPath -Name "DeviceEnumerationPolicy" -Value 1 -Force
+Write-Host "[DMA] External DMA Devices blocked when User is Locked" -ForegroundColor Green
+
+# 2. DISABLE LEGACY DMA DRIVERS (FireWire / PCMCIA)
+# These are classic DMA attack vectors via SBP-2.
+$legacyDrivers = @("ohci1394", "1394ohci", "pcmcia", "sdbus")
+foreach ($driver in $legacyDrivers) {
+    if (Get-Service $driver -ErrorAction SilentlyContinue) {
+        Stop-Service $driver -Force
+        Set-Service $driver -StartupType Disabled
+        Write-Host "[DMA] Legacy Driver Disabled: $driver" -ForegroundColor Green
+    }
+}
+Write-Host "[DMA] Legacy Drivers Checked" -ForegroundColor Green
+
+# 3. DISABLE POWERSHELL v2 (Downgrade Attack Mitigation)
+# Attackers often use PSv2 to bypass modern logging/AMSI.
+Disable-WindowsOptionalFeature -Online -FeatureName MicrosoftWindowsPowerShellV2 -NoRestart -ErrorAction SilentlyContinue
+Disable-WindowsOptionalFeature -Online -FeatureName MicrosoftWindowsPowerShellV2Root -NoRestart -ErrorAction SilentlyContinue
+Write-Host "[SEC] PowerShell v2 (Legacy) Disabled" -ForegroundColor Green
+
+# 4. SECURE BOOT HARDENING (Check only)
+# We can't change BIOS, but we can verify.
+if ((Get-SecureBootUEFI).Status -eq "Enabled") {
+    Write-Host "[BOOT] Secure Boot is Active" -ForegroundColor Green
+} else {
+    Write-Host "[BOOT] WARNING: Secure Boot is DISABLED in BIOS." -ForegroundColor Red
+    Write-Host "       -> ACTION: Enable Secure Boot in BIOS for Anti-Rootkit protection." -ForegroundColor Yellow
+}
+
+# 5. KERNEL MODE DRIVER BLOCKLIST (Vulnerable Driver Blocklist)
+# Requires HVCI usually, but we can try enabling the policy.
+$ciPath = "HKLM:\SYSTEM\CurrentControlSet\Control\CI\Config"
+if (!(Test-Path $ciPath)) { New-Item -Path $ciPath -Force | Out-Null }
+Set-ItemProperty -Path $ciPath -Name "VulnerableDriverBlocklistEnable" -Value 1 -Force
+Write-Host "[KERNEL] Vulnerable Driver Blocklist Enabled" -ForegroundColor Green
+
+Write-Host "`n>>> GAPS CLOSED (STABILITY PRESERVED) <<<" -ForegroundColor Cyan
+Read-Host "Press Enter to exit..."

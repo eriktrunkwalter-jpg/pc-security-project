@@ -1,0 +1,33 @@
+# DisableWebcam.ps1
+# Permanently disables integrated webcam via PnP and Registry.
+
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    Exit
+}
+
+$ErrorActionPreference = "SilentlyContinue"
+Write-Host ">>> DISABLING WEBCAM PERMANENTLY <<<" -ForegroundColor Cyan
+
+# 1. Disable via PnP (Device Manager)
+Write-Host "   + Disabling Camera Devices..." -NoNewline
+$cameras = Get-PnpDevice -Class Camera,Image -Status OK
+foreach ($cam in $cameras) {
+    Disable-PnpDevice -InstanceId $cam.InstanceId -Confirm:$false
+    Write-Host "`n     - Disabled: $($cam.FriendlyName)" -NoNewline
+}
+Write-Host " Done." -ForegroundColor Green
+
+# 2. Disable via Registry (Group Policy Equivalent)
+Write-Host "   + Setting Registry Policies..." -NoNewline
+$regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Camera"
+if (!(Test-Path $regPath)) { New-Item -Path $regPath -Force | Out-Null }
+Set-ItemProperty -Path $regPath -Name "AllowCamera" -Value 0 -Type DWord
+Write-Host " Done." -ForegroundColor Green
+
+# 3. Disable via Privacy Settings (Current User & System)
+$privacyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\webcam"
+Set-ItemProperty -Path $privacyPath -Name "Value" -Value "Deny" -Type String
+Write-Host "   + Global Privacy Setting: DENY." -ForegroundColor Green
+
+Write-Host "`n>>> WEBCAM IS DEAD. <<<" -ForegroundColor Red

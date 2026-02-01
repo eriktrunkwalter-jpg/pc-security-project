@@ -1,0 +1,60 @@
+# FORCE ENCRYPTION NOW - FINAL VERSION
+# Uses PowerShell Native Cmdlet and manage-bde fallback
+# Logs results to file
+
+$LogFile = "$env:USERPROFILE\Documents\trae_projects\pc\encryption_result.txt"
+Start-Transcript -Path $LogFile -Force
+
+$ErrorActionPreference = "Continue"
+Write-Host ">>> STARTING 256-BIT ENCRYPTION <<<" -ForegroundColor Cyan
+
+try {
+    # 1. Set Policy for 256-bit XTS-AES
+    Write-Host "Setting Registry Policy..."
+    if (!(Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\FVE")) {
+        New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\FVE" -Force | Out-Null
+    }
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\FVE" -Name "EncryptionMethodWithXtsOs" -Value 7 -Type DWord -Force
+    Write-Host "Policy Set: XTS-AES 256" -ForegroundColor Green
+
+    # 2. Try Enable-BitLocker (PowerShell Native)
+    $pwContent = "ErikUser13092002!"
+    $securePass = ConvertTo-SecureString $pwContent -AsPlainText -Force
+    
+    Write-Host "Attempting Enable-BitLocker..." -ForegroundColor Yellow
+    # Note: If TPM is missing, this might fail unless we allow no TPM via policy, but we'll try.
+    # Adding -UsedSpaceOnly for speed
+    Enable-BitLocker -MountPoint "C:" -EncryptionMethod XtsAes256 -Password $securePass -PasswordProtector -SkipHardwareTest -ErrorAction Stop
+    
+    Write-Host "[SUCCESS] Encryption Started via PowerShell Cmdlet!" -ForegroundColor Green
+
+} catch {
+    Write-Host "[WARNING] PowerShell Cmdlet failed: $_" -ForegroundColor Red
+    Write-Host "Trying fallback to manage-bde..." -ForegroundColor Yellow
+    
+    try {
+        # Fallback: manage-bde
+        # Force XTS-AES 256 explicitly
+        $proc = Start-Process manage-bde -ArgumentList "-on C: -rp -em XtsAes256 -skiphardwaretest" -Wait -PassThru -NoNewWindow
+        
+        if ($proc.ExitCode -eq 0) {
+            Write-Host "[SUCCESS] Encryption Started via manage-bde!" -ForegroundColor Green
+        } else {
+            Write-Host "[ERROR] manage-bde failed with exit code $($proc.ExitCode)" -ForegroundColor Red
+            manage-bde -status C:
+        }
+    } catch {
+        Write-Host "[CRITICAL ERROR] Fallback failed: $_" -ForegroundColor Red
+    }
+}
+
+Write-Host "Checking Final Status..."
+manage-bde -status C:
+
+Stop-Transcript
+
+Write-Host "`n>>> PROCESS COMPLETE <<<" -ForegroundColor Cyan
+Write-Host "Press ENTER to REBOOT the system now..."
+Read-Host
+Restart-Computer -Force
+

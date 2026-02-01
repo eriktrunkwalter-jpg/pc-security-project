@@ -1,0 +1,69 @@
+# UltraAnonymityBoost.ps1
+# Takes anonymity to the paranoia level.
+# Disables: Location, Sensors, Ink/Handwriting, Cloud Content, Feedback, Pagefile Forensics.
+# Enables: MAC Randomization (Wi-Fi), DNS-over-HTTPS enforcement.
+
+# Self-Elevation
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    Exit
+}
+
+$ErrorActionPreference = "SilentlyContinue"
+Write-Host ">>> BOOSTING ANONYMITY TO MAXIMUM <<<" -ForegroundColor Cyan
+
+# 1. DISABLE LOCATION & SENSORS
+$locPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors"
+if (!(Test-Path $locPath)) { New-Item -Path $locPath -Force | Out-Null }
+Set-ItemProperty -Path $locPath -Name "DisableLocation" -Value 1 -Force
+Set-ItemProperty -Path $locPath -Name "DisableSensors" -Value 1 -Force
+Write-Host "[ANON] Global Location & Sensors Disabled" -ForegroundColor Green
+
+# 2. DISABLE INK & TYPING DATA COLLECTION
+$inkPath = "HKLM:\SOFTWARE\Policies\Microsoft\InputPersonalization"
+if (!(Test-Path $inkPath)) { New-Item -Path $inkPath -Force | Out-Null }
+Set-ItemProperty -Path $inkPath -Name "RestrictImplicitInkCollection" -Value 1 -Force
+Set-ItemProperty -Path $inkPath -Name "RestrictImplicitTextCollection" -Value 1 -Force
+Write-Host "[ANON] Handwriting & Typing Data Collection Disabled" -ForegroundColor Green
+
+# 3. DISABLE CLOUD CONTENT & SUGGESTED APPS (Consumer Features)
+$cloudPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
+if (!(Test-Path $cloudPath)) { New-Item -Path $cloudPath -Force | Out-Null }
+Set-ItemProperty -Path $cloudPath -Name "DisableWindowsConsumerFeatures" -Value 1 -Force
+Write-Host "[ANON] 'Suggested Apps' & Cloud Content Disabled" -ForegroundColor Green
+
+# 4. ANTI-FORENSICS: WIPE PAGEFILE AT SHUTDOWN
+# Prevents recovering sensitive data (passwords/keys) from pagefile.sys after power off.
+$memPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
+Set-ItemProperty -Path $memPath -Name "ClearPageFileAtShutdown" -Value 1 -Force
+Write-Host "[FORENSICS] Pagefile Wipe at Shutdown ENABLED" -ForegroundColor Green
+
+# 5. MAC ADDRESS RANDOMIZATION (Wi-Fi)
+# Harder to do via Registry universally, using netsh if possible or setting global policy.
+# This sets "Random Hardware Addresses" to On for new connections if supported.
+# Note: Actual per-network setting is complex, but we can set the global feature.
+try {
+    # Set global randomization to 1 (Enabled) if key exists (Windows 10/11)
+    $wlanPath = "HKLM:\SOFTWARE\Microsoft\WlanSvc\Anonymity"
+    if (!(Test-Path $wlanPath)) { New-Item -Path $wlanPath -Force | Out-Null }
+    # This is an undocumented tweak, effectiveness varies by driver.
+    Set-ItemProperty -Path $wlanPath -Name "RandomMac" -Value 1 -Force
+    Write-Host "[ANON] Global MAC Randomization Flag Set (Verify in Settings)" -ForegroundColor Green
+} catch {
+    Write-Host "[ANON] Could not set MAC Randomization (Driver dependent)" -ForegroundColor Yellow
+}
+
+# 6. DISABLE CLIPBOARD HISTORY (Cloud Sync Risk)
+$sysPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System"
+if (!(Test-Path $sysPath)) { New-Item -Path $sysPath -Force | Out-Null }
+Set-ItemProperty -Path $sysPath -Name "AllowClipboardHistory" -Value 0 -Force
+Set-ItemProperty -Path $sysPath -Name "AllowCrossDeviceClipboard" -Value 0 -Force
+Write-Host "[PRIVACY] Clipboard History & Cloud Sync Disabled" -ForegroundColor Green
+
+# 7. DISABLE ERROR REPORTING (WER)
+$werPath = "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting"
+Set-ItemProperty -Path $werPath -Name "Disabled" -Value 1 -Force
+Write-Host "[PRIVACY] Windows Error Reporting Disabled" -ForegroundColor Green
+
+Write-Host "`n>>> ANONYMITY OPTIMIZED <<<" -ForegroundColor Cyan
+Read-Host "Press Enter to exit..."

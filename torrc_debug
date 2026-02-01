@@ -1,0 +1,3 @@
+SocksPort 9050
+SafeLogging 1
+DataDirectory C:\Users\Erik\AppData\Local\Temp\tor_data_debug

@@ -1,0 +1,61 @@
+# NuclearRemediation.ps1
+# Fixes vulnerabilities found in Nuclear Audit:
+# - Purges Shadow Copies
+# - Clears MRU Lists from Registry
+# - Disables Activity Feed/Timeline
+# - Hardens Firewall (Block Inbound Default)
+
+# Self-Elevation
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    Exit
+}
+
+$ErrorActionPreference = "SilentlyContinue"
+Write-Host ">>> INITIATING NUCLEAR REMEDIATION <<<" -ForegroundColor Cyan
+
+# 1. PURGE SHADOW COPIES (Forensics)
+# Requires Admin. Removes all old snapshots of files.
+Write-Host "[FIX] Purging Shadow Copies..." -ForegroundColor Yellow
+$vss = vssadmin delete shadows /all /quiet
+Write-Host "[FIX] Shadow Copies Deleted (If any existed)." -ForegroundColor Green
+
+# 2. CLEAR MRU LISTS (Registry Forensics)
+# RecentDocs stores list of opened files.
+Write-Host "[FIX] Clearing Recent Docs MRU from Registry..." -ForegroundColor Yellow
+$mruPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\RecentDocs"
+Remove-Item -Path $mruPath -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -Path $mruPath -Force | Out-Null
+Write-Host "[FIX] Recent Docs MRU Purged." -ForegroundColor Green
+
+# 3. DISABLE ACTIVITY FEED / TIMELINE (Tracking)
+Write-Host "[FIX] Disabling Activity Feed & Timeline..." -ForegroundColor Yellow
+$sysPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System"
+if (!(Test-Path $sysPath)) { New-Item -Path $sysPath -Force | Out-Null }
+Set-ItemProperty -Path $sysPath -Name "EnableActivityFeed" -Value 0 -Force
+Set-ItemProperty -Path $sysPath -Name "PublishUserActivities" -Value 0 -Force
+Set-ItemProperty -Path $sysPath -Name "UploadUserActivities" -Value 0 -Force
+
+# Also set in HKCU to be sure
+$sysPathUser = "HKCU:\Software\Policies\Microsoft\Windows\System"
+if (!(Test-Path $sysPathUser)) { New-Item -Path $sysPathUser -Force | Out-Null }
+Set-ItemProperty -Path $sysPathUser -Name "EnableActivityFeed" -Value 0 -Force
+Set-ItemProperty -Path $sysPathUser -Name "PublishUserActivities" -Value 0 -Force
+Set-ItemProperty -Path $sysPathUser -Name "UploadUserActivities" -Value 0 -Force
+Write-Host "[FIX] Activity Feed & Timeline Disabled." -ForegroundColor Green
+
+# 4. FIREWALL HARDENING (Network)
+# Set Default Inbound Action to Block for Public/Private Profiles
+Write-Host "[FIX] Hardening Windows Firewall..." -ForegroundColor Yellow
+Set-NetFirewallProfile -Profile Public,Private,Domain -DefaultInboundAction Block -Enabled True
+Write-Host "[FIX] Firewall Default Inbound Action -> BLOCK (All Profiles)" -ForegroundColor Green
+
+# 5. CLEAR ADVERTISING ID (Just in case)
+$advPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo"
+if (Test-Path $advPath) {
+    Set-ItemProperty -Path $advPath -Name "Enabled" -Value 0 -Force
+    Write-Host "[FIX] Advertising ID Disabled." -ForegroundColor Green
+}
+
+Write-Host "`n>>> REMEDIATION COMPLETE <<<" -ForegroundColor Cyan
+Read-Host "Press Enter to exit..."

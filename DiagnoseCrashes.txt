@@ -1,0 +1,71 @@
+# DiagnoseCrashes.ps1
+# Analyzes System Event Logs for Crash Causes (BugCheck, Kernel-Power) and BitLocker Status
+
+$LogFile = "$env:USERPROFILE\Documents\trae_projects\pc\CrashDiagnosis.txt"
+Start-Transcript -Path $LogFile -Force
+
+Write-Host ">>> CRASH DIAGNOSIS STARTED <<<" -ForegroundColor Cyan
+
+# 1. Check for Unexpected Shutdowns (Event ID 41)
+Write-Host "`n[1] Checking for Unexpected Shutdowns (Kernel-Power ID 41)..." -ForegroundColor Yellow
+try {
+    $unexpectedShutdowns = Get-WinEvent -FilterHashtable @{LogName='System'; ID=41} -MaxEvents 5 -ErrorAction Stop
+    foreach ($event in $unexpectedShutdowns) {
+        Write-Host "   Time: $($event.TimeCreated) - Message: $($event.Message)"
+    }
+} catch {
+    Write-Host "   No recent unexpected shutdowns found or access denied."
+}
+
+# 2. Check for BugChecks (Blue Screens - Event ID 1001)
+Write-Host "`n[2] Checking for BugChecks (Blue Screens ID 1001)..." -ForegroundColor Yellow
+try {
+    $bugChecks = Get-WinEvent -FilterHashtable @{LogName='System'; ID=1001} -MaxEvents 5 -ErrorAction SilentlyContinue
+    if ($bugChecks) {
+        foreach ($event in $bugChecks) {
+            Write-Host "   Time: $($event.TimeCreated) - Message: $($event.Message)"
+        }
+    } else {
+        Write-Host "   No BugCheck (BSOD) events found in recent logs." -ForegroundColor Green
+    }
+} catch {
+    Write-Host "   Error reading BugCheck logs."
+}
+
+# 3. Check BitLocker Status (Potential Conflict Source)
+Write-Host "`n[3] Checking BitLocker Status..." -ForegroundColor Yellow
+try {
+    manage-bde -status C:
+} catch {
+    Write-Host "   Failed to query BitLocker status." -ForegroundColor Red
+}
+
+# 4. Check Critical Errors in System Log (Last 2 Hours)
+Write-Host "`n[4] Recent Critical System Errors (Last 2 Hours)..." -ForegroundColor Yellow
+try {
+    $recentErrors = Get-WinEvent -FilterHashtable @{LogName='System'; Level=1,2; StartTime=(Get-Date).AddHours(-2)} -ErrorAction SilentlyContinue
+    if ($recentErrors) {
+        $recentErrors | Select-Object -First 10 | Format-Table TimeCreated, Id, ProviderName, Message -AutoSize | Out-String | Write-Host
+    } else {
+        Write-Host "   No critical errors found in the last 2 hours." -ForegroundColor Green
+    }
+} catch {
+    Write-Host "   No critical errors found or access denied."
+}
+
+# 5. Check WER (Windows Error Reporting) for Application Crashes
+Write-Host "`n[5] Checking Windows Error Reporting (App Crashes)..." -ForegroundColor Yellow
+try {
+    $werEvents = Get-WinEvent -FilterHashtable @{LogName='Application'; ProviderName='Windows Error Reporting'} -MaxEvents 5 -ErrorAction SilentlyContinue
+    if ($werEvents) {
+        $werEvents | Select-Object -First 5 | Format-Table TimeCreated, Message -AutoSize | Out-String | Write-Host
+    } else {
+        Write-Host "   No recent WER events."
+    }
+} catch {
+    Write-Host "   No WER events found."
+}
+
+Stop-Transcript
+Write-Host "`n>>> DIAGNOSIS COMPLETE <<<" -ForegroundColor Cyan
+

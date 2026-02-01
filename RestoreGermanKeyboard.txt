@@ -1,0 +1,47 @@
+# RestoreGermanKeyboard.ps1
+# Adds German Keyboard Layout (de-DE) for typing usability.
+# Keeps 'en-US' as the primary system/display language for Anonymity.
+# Anonymity Trade-off: Key-mapping analysis (via JS) might reveal a QWERTZ layout, 
+# but the browser headers will still claim 'en-US'.
+
+# Self-Elevation
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    Exit
+}
+
+$ErrorActionPreference = "SilentlyContinue"
+Write-Host ">>> RESTORING GERMAN KEYBOARD LAYOUT <<<" -ForegroundColor Cyan
+
+# 1. ADD GERMAN KEYBOARD TO INPUT LIST
+# We want: English (US) as Language + German (DE) as Input Method.
+# Or: English (US) + German (DE) languages, with DE as active input.
+
+Write-Host "[KEYBOARD] Adding 'de-DE' to language list..." -ForegroundColor Yellow
+$LangList = Get-WinUserLanguageList
+if ($LangList.LanguageTag -notcontains "de-DE") {
+    $LangList.Add("de-DE")
+    Set-WinUserLanguageList $LangList -Force
+    Write-Host "[KEYBOARD] German language pack added." -ForegroundColor Green
+} else {
+    Write-Host "[KEYBOARD] German language pack already present." -ForegroundColor Green
+}
+
+# 2. SET INPUT METHOD OVERRIDE
+# This forces the keyboard to behave like German QWERTZ
+# The Registry key 'Keyboard Layout\Preload' controls the order.
+# 0407 = German Standard, 0409 = US English.
+
+Write-Host "[KEYBOARD] Setting Primary Input Method to German (0407)..." -ForegroundColor Yellow
+$regPath = "HKCU:\Keyboard Layout\Preload"
+Set-ItemProperty -Path $regPath -Name "1" -Value "00000407" -Force # German first
+Set-ItemProperty -Path $regPath -Name "2" -Value "00000409" -Force # US English second
+
+# 3. APPLY CHANGES (Requires Re-Login/Reboot usually, but we try to trigger reload)
+# We can't easily force a reload without logoff, but the registry change sticks for next login.
+# For immediate effect, the user can press Win+Space to toggle.
+
+Write-Host "`n>>> KEYBOARD RESTORED (QWERTZ) <<<" -ForegroundColor Cyan
+Write-Host "NOTE: Press [Windows-Key] + [Space] to toggle between layouts instantly."
+Write-Host "      Your typing (Z/Y, AE/OE/UE) should work normally again."
+Read-Host "Press Enter to exit..."

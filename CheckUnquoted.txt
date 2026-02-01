@@ -1,0 +1,7 @@
+
+$unquoted = Get-WmiObject Win32_Service | Where-Object { $_.PathName -notmatch '^"' -and $_.PathName -match ' ' -and $_.PathName -notmatch '^C:\\Windows' }
+if ($unquoted) {
+    $unquoted | Select-Object Name, PathName | Out-String | Out-File "UnquotedServices.txt"
+} else {
+    "None found" | Out-File "UnquotedServices.txt"
+}

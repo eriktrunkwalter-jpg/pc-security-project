@@ -1,0 +1,55 @@
+# EnableFirewallKillSwitch.ps1
+# WARNING: BLOCKS ALL INTERNET TRAFFIC EXCEPT TOR.
+# Use this for "Nuclear" Anonymity.
+# Run 'DisableFirewallKillSwitch.ps1' (created below) to restore access.
+
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    Exit
+}
+
+$torPath = "C:\Users\Erik\OneDrive\Desktop\Tor Browser\Browser\TorBrowser\Tor\tor.exe"
+if (!(Test-Path $torPath)) {
+    $torPath = (Get-Command "tor" -ErrorAction SilentlyContinue).Source
+}
+
+Write-Host ">>> ACTIVATING TOR KILL SWITCH (FIREWALL) <<<" -ForegroundColor Red
+if (!$torPath) {
+    Write-Host "   ! CRITICAL ERROR: Tor executable not found. Aborting to prevent lockout." -ForegroundColor Red
+    Exit
+}
+
+# 1. Reset Firewall
+Write-Host "   + Resetting Firewall Rules..." -NoNewline
+NetSh Advfirewall set allprofiles state on
+NetSh Advfirewall set allprofiles firewallpolicy blockinbound,blockoutbound
+Write-Host " Done." -ForegroundColor Green
+
+# 2. Allow Loopback (Localhost)
+New-NetFirewallRule -DisplayName "Allow Loopback" -Direction Outbound -LocalAddress 127.0.0.1 -RemoteAddress 127.0.0.1 -Action Allow | Out-Null
+New-NetFirewallRule -DisplayName "Allow Loopback" -Direction Inbound -LocalAddress 127.0.0.1 -RemoteAddress 127.0.0.1 -Action Allow | Out-Null
+
+# 3. Allow Tor
+Write-Host "   + Whitelisting Tor ($torPath)..." -NoNewline
+New-NetFirewallRule -DisplayName "Allow Tor Outbound" -Direction Outbound -Program $torPath -Action Allow | Out-Null
+New-NetFirewallRule -DisplayName "Allow Tor Inbound" -Direction Inbound -Program $torPath -Action Allow | Out-Null
+Write-Host " Done." -ForegroundColor Green
+
+# 4. Allow DNS (UDP 53) - Optional: Route DNS through Tor (Safer) or Allow System DNS
+# For "Brutal" security, we should ONLY allow Tor. Tor handles DNS via SOCKS5.
+# So NO direct DNS rule.
+
+Write-Host "`n>>> KILL SWITCH ACTIVE. ONLY TOR CAN CONNECT. <<<" -ForegroundColor Red
+Write-Host "If Tor crashes, you have NO Internet."
+Write-Host "Run 'DisableFirewallKillSwitch.ps1' to restore normal access."
+
+# Create Restore Script
+$restoreScript = @"
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -File `"`$PSCommandPath`""
+    Exit
+}
+NetSh Advfirewall set allprofiles firewallpolicy blockinbound,allowoutbound
+Write-Host '>>> KILL SWITCH DISABLED. NORMAL INTERNET RESTORED. <<<' -ForegroundColor Green
+"@
+Set-Content -Path "$PSScriptRoot\DisableFirewallKillSwitch.ps1" -Value $restoreScript
