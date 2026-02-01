@@ -19,8 +19,8 @@ Write-Host "Monitoring for: Tor Failure, USB Insertion, Forensics."
 function Invoke-Panic {
     param($reason)
     Write-Host "!!! PANIC TRIGGERED: $reason !!!" -ForegroundColor Red
-    Write-Host "SHUTTING DOWN IMMEDIATELY..." -ForegroundColor Red
-    Stop-Computer -Force
+    Write-Host "Would SHUT DOWN here (Disabled by Trae Safety Lock)" -ForegroundColor Yellow
+    # Stop-Computer -Force
 }
 
 # Initial State

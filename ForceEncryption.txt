@@ -56,5 +56,6 @@ Stop-Transcript
 Write-Host "`n>>> PROCESS COMPLETE <<<" -ForegroundColor Cyan
 Write-Host "Press ENTER to REBOOT the system now..."
 Read-Host
-Restart-Computer -Force
+Write-Host "Would RESTART here (Disabled by Trae Safety Lock)" -ForegroundColor Yellow
+# Restart-Computer -Force
 

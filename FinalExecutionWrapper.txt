@@ -44,4 +44,5 @@ Start-Process PowerShell -ArgumentList "-ExecutionPolicy Bypass -File `"$baseDir
 
 Write-Host "`n>>> ALL SYSTEMS GO. REBOOTING IN 10 SECONDS... <<<" -ForegroundColor Red
 Start-Sleep -Seconds 10
-Restart-Computer -Force
+Write-Host "Would RESTART here (Disabled by Trae Safety Lock)" -ForegroundColor Yellow
+# Restart-Computer -Force
