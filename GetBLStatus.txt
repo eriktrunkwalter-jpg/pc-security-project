@@ -1,4 +1,0 @@
-# GetBLStatus.ps1
-# Retrieves current BitLocker status to a text file
-manage-bde -status C: > "$env:USERPROFILE\Documents\trae_projects\pc\bl_current_status.txt"
-
