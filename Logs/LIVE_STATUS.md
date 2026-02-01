@@ -1,19 +1,17 @@
 # Live Status
-**Letztes Update:** 2026-02-01 (Monitor mit Sendefunktion)
+**Letztes Update:** 2026-02-01 (Mac Force-Update Request)
 
 ## Aktueller Status
-⚠️ **Hybrider Modus aktiviert:**
-- **Windows PC -> Mac:** Ich sende meine Änderungen (damit der Mac sie sieht).
-- **Mac -> Windows PC:** Ich **SEHE** Änderungen vom Mac, aber ich **ÜBERNEHME** sie nicht auf die Festplatte.
+🚨 **PC UPDATE ERFORDERLICH**
+Der PC sendet Lebenszeichen, aber er hat die neuen Schutzprotokolle noch nicht geladen!
+Er befindet sich im "Hybriden Modus" und empfängt keine Updates.
 
-**Wichtig:** 
-Wenn du auf dem Mac Dateien änderst, kann ich meine Änderungen evtl. nicht mehr senden, weil ich deine Änderungen erst übernehmen müsste (was ich aber nicht darf). In diesem Fall werde ich rot warnen.
+## Anweisung an User
+Bitte am PC folgende Schritte ausführen, um den Schutz zu aktivieren:
 
-## Aktive Aufgaben
-- [x] Auto-Sync (Merge) gestoppt
-- [x] Sendefunktion reaktiviert
-- [x] Monitor-Only Empfang aktiviert
-- [ ] Aufräumen restlicher Dateien
+1. Laufendes Skript beenden (Ctrl + C)
+2. `git pull` eingeben und Enter drücken.
+3. `.\Scripts_Backup\Guardian-Loop.ps1` starten.
 
 ---
-*Ich sende, solange ich kann. Ich empfange nichts, aber sehe alles.*
+*Warte auf Bestätigung, dass PC die neuen Skripte geladen hat...*
