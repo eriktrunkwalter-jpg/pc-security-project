@@ -1,15 +1,19 @@
 # Live Status
-**Letztes Update:** 2026-02-01 (Start der Live-Übertragung)
+**Letztes Update:** 2026-02-01 (Bidirektionale Synchronisation aktiviert)
 
 ## Aktueller Status
-Das System ist für die Live-Synchronisation eingerichtet.
-- **Windows PC:** Sendet Änderungen alle 10 Sekunden.
-- **Mac:** Empfängt Änderungen automatisch (wenn `mac_sync.sh` läuft).
+Das System ist jetzt **vollständig synchronisiert**:
+- **Windows PC:** Sendet UND empfängt Änderungen alle 10 Sekunden.
+- **Mac:** Sendet und empfängt Änderungen (via `mac_sync.sh`).
+
+Das bedeutet: Wenn du auf dem Mac eine Datei änderst, sehe ich sie hier automatisch. Wenn ich hier etwas ändere, siehst du es dort.
 
 ## Aktive Aufgaben
-- [x] Auto-Sync eingerichtet
-- [x] Live-Status-Datei erstellt (in Logs/LIVE_STATUS.md)
-- [ ] Weitere Aufräumarbeiten...
+- [x] Auto-Sync eingerichtet (Windows -> GitHub)
+- [x] Mac-Sync Skript bereitgestellt
+- [x] Bidirektionalen Sync aktiviert (Windows <-> GitHub)
+- [x] Live-Status-Datei erstellt
+- [ ] Aufräumen restlicher Dateien
 
 ---
-*Diese Datei wird automatisch aktualisiert, wenn ich neue Aufgaben erledige.*
+*Ich lese jetzt auch aktiv mit, was der Mac macht.*
