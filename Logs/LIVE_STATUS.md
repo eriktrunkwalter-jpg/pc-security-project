@@ -1,17 +1,19 @@
 # Live Status
-**Letztes Update:** 2026-02-01 (TURBO MODE AKTIVIERT)
+**Letztes Update:** 2026-02-01 (Monitor mit Sendefunktion)
 
 ## Aktueller Status
-Das System läuft jetzt im **Hochgeschwindigkeits-Modus**:
-- **Windows PC:** Prüft alle **2 Sekunden** (!) auf Änderungen.
-- **Mac:** Sendet und empfängt Änderungen (via `mac_sync.sh`).
+⚠️ **Hybrider Modus aktiviert:**
+- **Windows PC -> Mac:** Ich sende meine Änderungen (damit der Mac sie sieht).
+- **Mac -> Windows PC:** Ich **SEHE** Änderungen vom Mac, aber ich **ÜBERNEHME** sie nicht auf die Festplatte.
+
+**Wichtig:** 
+Wenn du auf dem Mac Dateien änderst, kann ich meine Änderungen evtl. nicht mehr senden, weil ich deine Änderungen erst übernehmen müsste (was ich aber nicht darf). In diesem Fall werde ich rot warnen.
 
 ## Aktive Aufgaben
-- [x] Auto-Sync eingerichtet
-- [x] Mac-Sync Skript bereitgestellt
-- [x] Bidirektionalen Sync aktiviert
-- [x] **TURBO MODE** aktiviert (2s Intervall)
+- [x] Auto-Sync (Merge) gestoppt
+- [x] Sendefunktion reaktiviert
+- [x] Monitor-Only Empfang aktiviert
 - [ ] Aufräumen restlicher Dateien
 
 ---
-*Ich bin bereit. Zeig mir, was der Mac kann!*
+*Ich sende, solange ich kann. Ich empfange nichts, aber sehe alles.*
