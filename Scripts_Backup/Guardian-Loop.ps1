@@ -29,7 +29,17 @@ Write-Host "GUARDIAN SYSTEM GESTARTET" -ForegroundColor Green
 Write-Host "Überwache Mac-Signale und Systemstatus..."
 $offlineCounter = 0
 
-$safeCommit = "a199a75c002f75757ac8f2ebbb55552a40909a18" # Aktueller 'Clean' State
+$safeCommit = "a199a75c002f75757ac8f2ebbb55552a40909a18" # Fallback 'Clean' State
+$stableLog = "Logs\LastStableCommit.txt"
+
+# Lade letzten stabilen Save, falls vorhanden
+if (Test-Path $stableLog) {
+    $lastStable = Get-Content $stableLog -ErrorAction SilentlyContinue
+    if ($lastStable -match "^[a-f0-9]{40}$") {
+        $safeCommit = $lastStable
+        Write-Host "Letzter stabiler Save geladen: $safeCommit" -ForegroundColor Cyan
+    }
+}
 
 # --- ANTI-BOOT-LOOP PROTECTION ---
 # Falls der PC in einer Neustart-Schleife hängt (z.B. durch aggressive Skripte),
@@ -44,12 +54,14 @@ if (Test-Path $bootLog) {
 }
 $bootCount++
 Set-Content -Path $bootLog -Value $bootCount
+$scriptStartTime = Get-Date
+$stableStateReached = $false
 
 Write-Host "Boot-Check: Start Nr. $bootCount (Schwellenwert: 3)" -ForegroundColor Gray
 
 if ($bootCount -ge 3) {
     Write-Host "🚨 KRITISCHER BOOT-LOOP ERKANNT ($bootCount schnelle Neustarts)!" -ForegroundColor Red -BackgroundColor Yellow
-    Write-Host "⚠️ PRIORISIERE RETTUNGS-PROTOKOLL VOR ALLEN ANDEREN PROZESSEN..."
+    Write-Host "⚠️ Protokoll aktiv! Priorisiere Rettung auf letzten stabilen Stand..."
     
     # NOTFALL-RETTUNG AUSLÖSEN
     & ".\Scripts_Backup\Mac-Rescuer.ps1" -SafeCommitHash $safeCommit
@@ -60,13 +72,6 @@ if ($bootCount -ge 3) {
     # Warten, damit der Reset wirken kann
     Start-Sleep -Seconds 10
 }
-
-# Wenn das System 2 Minuten stabil läuft, wird der Counter zurückgesetzt
-Start-Job -ScriptBlock {
-    param($path)
-    Start-Sleep -Seconds 120
-    Set-Content -Path $path -Value 0
-} -ArgumentList $bootLog
 # ---------------------------------
 
 while ($true) {
@@ -115,6 +120,19 @@ while ($true) {
     }
     
     if ($isOnline) {
+        # STABILITÄTS-CHECK (Läuft das System > 2 Minuten stabil?)
+        if (-not $stableStateReached -and (Get-Date).Subtract($scriptStartTime).TotalMinutes -ge 2) {
+            try {
+                $currentCommit = git rev-parse HEAD
+                Set-Content -Path $stableLog -Value $currentCommit
+                Set-Content -Path $bootLog -Value 0
+                $stableStateReached = $true
+                Write-Host "✅ System stabil (> 2 Min). Savepoint aktualisiert auf: $currentCommit" -ForegroundColor Green
+            } catch {
+                Write-Host "Konnte Stable-Point nicht speichern." -ForegroundColor Yellow
+            }
+        }
+
         # Prüfe auf Restore-Trigger (Datei existiert im Remote?)
         # Wir müssen schauen, ob die Datei im Origin/Master existiert, ohne zu mergen
         $remoteFiles = git ls-tree -r origin/master --name-only
