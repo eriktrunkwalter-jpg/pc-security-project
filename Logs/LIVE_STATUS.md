@@ -1,18 +1,17 @@
 # Live Status
-**Letztes Update:** 2026-02-01 (Sync-Test gestartet)
+**Letztes Update:** 2026-02-01 (TURBO MODE AKTIVIERT)
 
 ## Aktueller Status
-Das System ist jetzt **vollständig synchronisiert**:
-- **Windows PC:** Sendet UND empfängt Änderungen alle 10 Sekunden.
+Das System läuft jetzt im **Hochgeschwindigkeits-Modus**:
+- **Windows PC:** Prüft alle **2 Sekunden** (!) auf Änderungen.
 - **Mac:** Sendet und empfängt Änderungen (via `mac_sync.sh`).
 
 ## Aktive Aufgaben
-- [x] Auto-Sync eingerichtet (Windows -> GitHub)
+- [x] Auto-Sync eingerichtet
 - [x] Mac-Sync Skript bereitgestellt
-- [x] Bidirektionalen Sync aktiviert (Windows <-> GitHub)
-- [x] Live-Status-Datei erstellt
-- [x] **SYNC-TEST** gestartet (Datei `Logs/SYNC_TEST.txt` erstellt)
+- [x] Bidirektionalen Sync aktiviert
+- [x] **TURBO MODE** aktiviert (2s Intervall)
 - [ ] Aufräumen restlicher Dateien
 
 ---
-*Ich lese jetzt auch aktiv mit, was der Mac macht.*
+*Ich bin bereit. Zeig mir, was der Mac kann!*
