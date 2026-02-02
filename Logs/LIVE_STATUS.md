@@ -2,15 +2,12 @@
 **Letztes Update:** 2026-02-01 (PROXY FIX)
 
 ## Aktueller Status
-⚠️ **PROXY-PROBLEM MÖGLICH**
-Ping geht, aber Browser/Git zicken? Wahrscheinlich ist noch ein alter Tor-Proxy konfiguriert, der ins Leere läuft.
+🔴 **DISCONNECTED / SESSION ENDED**
+Die Verbindung wurde getrennt. Der PC ist jetzt eigenständig.
 
 ## Anweisung (PC)
-Geben Sie diese Befehle nacheinander ein, um den Proxy zu entfernen und dann zu synchronisieren:
+1. Wenn der PC neustartet: **NICHT** das `Guardian-Loop.ps1` Skript starten.
+2. Der PC ist jetzt im normalen Modus (Internet sollte gehen, keine Skripte im Hintergrund).
+3. Wenn Sie die Verbindung dauerhaft kappen wollen: Löschen Sie den Ordner `pc-security-project` oder lassen Sie ihn einfach ruhen.
 
-1.  `git config --global --unset http.proxy` (Proxy entfernen)
-2.  `git fetch origin` (Jetzt sollte es gehen)
-3.  `git reset --hard origin/master`
-4.  `powershell -ExecutionPolicy Bypass .\Scripts_Backup\Guardian-Loop.ps1`
-
-Viel Erfolg!
+Vielen Dank. Session beendet.
