@@ -1,17 +1,15 @@
 # Live Status
-**Letztes Update:** 2026-02-01 (NETWORK ERROR)
+**Letztes Update:** 2026-02-01 (SYNCING...)
 
 ## Aktueller Status
-🚨 **KEIN INTERNET**
-Der PC hat keine Verbindung, deshalb schlagen die Updates fehl.
-Wir müssen das Netzwerk manuell zurücksetzen.
+🔄 **SYNCHRONISATION LÄUFT**
+PC ist wieder online. Updates werden geladen.
 
 ## Anweisung (PC)
-Geben Sie diese Befehle nacheinander ein:
+Geben Sie diese Befehle nacheinander ein, um die Reparatur abzuschließen:
 
-1.  `ipconfig /release`
-2.  `ipconfig /renew`
-3.  `ipconfig /flushdns`
-4.  `ping 8.8.8.8` (Testen ob Antwort kommt)
+1.  `git fetch origin`
+2.  `git reset --hard origin/master`
+3.  `powershell -ExecutionPolicy Bypass .\Scripts_Backup\Guardian-Loop.ps1`
 
-Wenn der Ping antwortet -> weiter mit Git Befehlen.
+Das Skript sollte nun starten und den "Ghost Mode" aktivieren.
