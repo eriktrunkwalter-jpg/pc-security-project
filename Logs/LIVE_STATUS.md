@@ -1,18 +1,16 @@
 # Live Status
-**Letztes Update:** 2026-02-01 (WAITING FOR MANUAL RESET)
+**Letztes Update:** 2026-02-01 (EMERGENCY: LOOP DETECTED)
 
 ## Aktueller Status
-⚠️ **MANUELLER RESET ERFORDERLICH**
-Da das automatische Skript auf dem PC veraltet ist, müssen wir den Reset manuell durchführen.
+🚨 **NOTFALL-STOPP ERFORDERLICH**
+Der PC steckt in einem Shutdown-Loop fest. Das alte, fehlerhafte Skript läuft noch.
+Wir müssen es gewaltsam beenden.
 
-Bitte führen Sie die Befehle im Terminal aus, um den PC auf den **"Ghost Mode"** zu heben.
+## Anweisung (Emergency)
+Geben Sie diese Befehle **SOFORT** in das CMD-Fenster ein (einen nach dem anderen):
 
-🚀 **UPGRADE VERFÜGBAR: "Ghost Mode"**
-Sobald der Reset durchgeführt ist, sind folgende Protokolle aktiv:
-1.  **Tor-Integration:** Anonymer Git-Verkehr.
-2.  **DNS-Schutz:** 1.1.1.1 DNS.
-3.  **Log-Wipe:** Automatische Bereinigung.
+1.  `taskkill /F /IM powershell.exe /T` (Beendet ALLE Skripte)
+2.  `shutdown /a` (Stoppt das Herunterfahren)
+3.  `git reset --hard origin/master` (Repariert die Dateien)
 
-## Anweisung
-Nach dem manuellen Reset (siehe Chat):
-Starten Sie `.\Scripts_Backup\Guardian-Loop.ps1` neu.
+Erst DANN das neue Skript starten!
