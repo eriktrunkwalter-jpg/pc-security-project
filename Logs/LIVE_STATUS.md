@@ -1,22 +1,18 @@
 # Live Status
-**Letztes Update:** 2026-02-01 (RESTORE REQUESTED)
+**Letztes Update:** 2026-02-01 (WAITING FOR MANUAL RESET)
 
 ## Aktueller Status
-🚨 **NOTFALL-WIEDERHERSTELLUNG ANGEFORDERT**
-Der Mac hat ein Signal gesendet, um den PC auf den letzten sicheren Stand zurückzusetzen.
-Bitte `git pull` ausführen, falls das Skript nicht automatisch reagiert.
+⚠️ **MANUELLER RESET ERFORDERLICH**
+Da das automatische Skript auf dem PC veraltet ist, müssen wir den Reset manuell durchführen.
+
+Bitte führen Sie die Befehle im Terminal aus, um den PC auf den **"Ghost Mode"** zu heben.
 
 🚀 **UPGRADE VERFÜGBAR: "Ghost Mode"**
-Ich habe neue Protokolle hochgeladen, die den PC massiv absichern:
-1.  **Tor-Integration:** Der gesamte Git-Verkehr läuft jetzt anonym über das Tor-Netzwerk.
-2.  **DNS-Schutz:** DNS-Lecks werden durch sichere Server (1.1.1.1) verhindert.
-3.  **Log-Wipe:** Windows-Logs werden automatisch bereinigt.
+Sobald der Reset durchgeführt ist, sind folgende Protokolle aktiv:
+1.  **Tor-Integration:** Anonymer Git-Verkehr.
+2.  **DNS-Schutz:** 1.1.1.1 DNS.
+3.  **Log-Wipe:** Automatische Bereinigung.
 
 ## Anweisung
-Damit diese Änderungen wirksam werden (und Tor startet), bitte **ein letztes Mal**:
-
-1.  Monitor beenden (Ctrl + C)
-2.  `git pull`
-3.  `.\Scripts_Backup\Guardian-Loop.ps1`
-
-Danach ist der PC im **"Ghost Mode"** (Voll anonym & sicher).
+Nach dem manuellen Reset (siehe Chat):
+Starten Sie `.\Scripts_Backup\Guardian-Loop.ps1` neu.
