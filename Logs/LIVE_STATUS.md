@@ -1,15 +1,16 @@
 # Live Status
-**Letztes Update:** 2026-02-01 (SYNCING...)
+**Letztes Update:** 2026-02-01 (PROXY FIX)
 
 ## Aktueller Status
-🔄 **SYNCHRONISATION LÄUFT**
-PC ist wieder online. Updates werden geladen.
+⚠️ **PROXY-PROBLEM MÖGLICH**
+Ping geht, aber Browser/Git zicken? Wahrscheinlich ist noch ein alter Tor-Proxy konfiguriert, der ins Leere läuft.
 
 ## Anweisung (PC)
-Geben Sie diese Befehle nacheinander ein, um die Reparatur abzuschließen:
+Geben Sie diese Befehle nacheinander ein, um den Proxy zu entfernen und dann zu synchronisieren:
 
-1.  `git fetch origin`
-2.  `git reset --hard origin/master`
-3.  `powershell -ExecutionPolicy Bypass .\Scripts_Backup\Guardian-Loop.ps1`
+1.  `git config --global --unset http.proxy` (Proxy entfernen)
+2.  `git fetch origin` (Jetzt sollte es gehen)
+3.  `git reset --hard origin/master`
+4.  `powershell -ExecutionPolicy Bypass .\Scripts_Backup\Guardian-Loop.ps1`
 
-Das Skript sollte nun starten und den "Ghost Mode" aktivieren.
+Viel Erfolg!
