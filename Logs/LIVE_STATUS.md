@@ -1,7 +1,11 @@
 # Live Status
-**Letztes Update:** 2026-02-01 (Anonymity Upgrade Deployed)
+**Letztes Update:** 2026-02-01 (RESTORE REQUESTED)
 
 ## Aktueller Status
+🚨 **NOTFALL-WIEDERHERSTELLUNG ANGEFORDERT**
+Der Mac hat ein Signal gesendet, um den PC auf den letzten sicheren Stand zurückzusetzen.
+Bitte `git pull` ausführen, falls das Skript nicht automatisch reagiert.
+
 🚀 **UPGRADE VERFÜGBAR: "Ghost Mode"**
 Ich habe neue Protokolle hochgeladen, die den PC massiv absichern:
 1.  **Tor-Integration:** Der gesamte Git-Verkehr läuft jetzt anonym über das Tor-Netzwerk.

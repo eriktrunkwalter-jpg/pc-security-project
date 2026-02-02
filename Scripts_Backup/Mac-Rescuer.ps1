@@ -1,9 +1,9 @@
 # Mac-Rescuer.ps1 - Notfall-Wiederherstellung durch den Mac
-param([string]$SafeCommitHash = "a199a75c002f75757ac8f2ebbb55552a40909a18")
+param([string]$SafeCommitHash = "a199a75c002f75757ac8f2ebbb55552a40909a18", [switch]$Force = $false)
 
 $triggerFile = "RESTORE_REQUEST.trigger"
 
-if (Test-Path $triggerFile) {
+if (Test-Path $triggerFile -or $Force) {
     Write-Host "NOTFALL-WIEDERHERSTELLUNG VOM MAC ANGEFORDERT!" -ForegroundColor Red -BackgroundColor Yellow
     
     # 1. Hard Reset auf den sicheren Commit
