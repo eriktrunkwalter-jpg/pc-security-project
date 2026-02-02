@@ -15,12 +15,24 @@ foreach ($ver in $versions) {
     $url = "$baseUrl/$ver/tor-expert-bundle-$ver-windows-x86_64.tar.gz"
     Write-Host "Versuche Download Version $ver..." -ForegroundColor Cyan
     try {
-        Invoke-WebRequest -Uri $url -OutFile $torZip -ErrorAction Stop
+        # User-Agent setzen, um Blockierung zu vermeiden
+        $wc = New-Object System.Net.WebClient
+        $wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+        $wc.DownloadFile($url, $torZip)
         $downloaded = $true
         Write-Host "Download erfolgreich!" -ForegroundColor Green
         break
     } catch {
-        Write-Warning "Version $ver nicht gefunden."
+        Write-Warning "Download fehlgeschlagen. Versuche Alternative..."
+        try {
+             # Alternativer Mirror / Methode
+             Invoke-WebRequest -Uri $url -OutFile $torZip -UserAgent "Mozilla/5.0" -ErrorAction Stop
+             $downloaded = $true
+             Write-Host "Download erfolgreich!" -ForegroundColor Green
+             break
+        } catch {
+             Write-Warning "Version $ver nicht gefunden."
+        }
     }
 }
 

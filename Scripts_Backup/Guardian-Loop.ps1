@@ -91,7 +91,8 @@ while ($true) {
     # 1. Hole Befehle vom Mac
     $isOnline = $true
     try {
-        git fetch origin -q -ErrorAction Stop
+        git fetch origin -q
+        if ($LASTEXITCODE -ne 0) { throw "Git Fetch Failed" }
         $offlineCounter = 0 # Reset bei Erfolg
     } catch {
         $isOnline = $false
