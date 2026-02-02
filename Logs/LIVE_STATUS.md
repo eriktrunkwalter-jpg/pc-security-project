@@ -1,16 +1,16 @@
 # Live Status
-**Letztes Update:** 2026-02-01 (EMERGENCY: LOOP DETECTED)
+**Letztes Update:** 2026-02-01 (WAITING FOR PC SYNC)
 
 ## Aktueller Status
-🚨 **NOTFALL-STOPP ERFORDERLICH**
-Der PC steckt in einem Shutdown-Loop fest. Das alte, fehlerhafte Skript läuft noch.
-Wir müssen es gewaltsam beenden.
+✅ **MAC: BEREIT**
+Ich habe die Trigger-Datei entfernt, damit der PC nach dem Reset nicht direkt wieder restored.
+Das Skript `Mac-Rescuer.ps1` ist repariert.
 
-## Anweisung (Emergency)
-Geben Sie diese Befehle **SOFORT** in das CMD-Fenster ein (einen nach dem anderen):
+## Anweisung (PC)
+Geben Sie diese Befehle nacheinander ein:
 
-1.  `taskkill /F /IM powershell.exe /T` (Beendet ALLE Skripte)
-2.  `shutdown /a` (Stoppt das Herunterfahren)
-3.  `git reset --hard origin/master` (Repariert die Dateien)
+1.  `git fetch origin`
+2.  `git reset --hard origin/master`
+3.  `powershell -ExecutionPolicy Bypass .\Scripts_Backup\Guardian-Loop.ps1`
 
-Erst DANN das neue Skript starten!
+Jetzt sollte alles sauber laufen.
