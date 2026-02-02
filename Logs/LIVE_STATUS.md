@@ -1,16 +1,17 @@
 # Live Status
-**Letztes Update:** 2026-02-01 (WAITING FOR PC SYNC)
+**Letztes Update:** 2026-02-01 (NETWORK ERROR)
 
 ## Aktueller Status
-✅ **MAC: BEREIT**
-Ich habe die Trigger-Datei entfernt, damit der PC nach dem Reset nicht direkt wieder restored.
-Das Skript `Mac-Rescuer.ps1` ist repariert.
+🚨 **KEIN INTERNET**
+Der PC hat keine Verbindung, deshalb schlagen die Updates fehl.
+Wir müssen das Netzwerk manuell zurücksetzen.
 
 ## Anweisung (PC)
 Geben Sie diese Befehle nacheinander ein:
 
-1.  `git fetch origin`
-2.  `git reset --hard origin/master`
-3.  `powershell -ExecutionPolicy Bypass .\Scripts_Backup\Guardian-Loop.ps1`
+1.  `ipconfig /release`
+2.  `ipconfig /renew`
+3.  `ipconfig /flushdns`
+4.  `ping 8.8.8.8` (Testen ob Antwort kommt)
 
-Jetzt sollte alles sauber laufen.
+Wenn der Ping antwortet -> weiter mit Git Befehlen.
